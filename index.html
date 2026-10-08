@@ -23,6 +23,9 @@
 @keyframes qhaXpPop{0%{opacity:0;transform:translate(-50%,-30%) scale(.4)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}40%{transform:translate(-50%,-50%) scale(1)}85%{opacity:1}100%{opacity:0;transform:translate(-50%,-95%) scale(.9)}}
 @keyframes qhaXpFly{0%{opacity:0;transform:translate(0,0) scale(.5)}25%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.2)}}
 @media(prefers-reduced-motion:reduce){.qha-xp-burst,.qha-xp-spark{animation:none}}
+
+/* Red notification only for a wrong-answer Glitch Token. */
+.toast.toast-danger{background:#45191f;border:1px solid #ff647d;color:#ffb0b0;box-shadow:0 15px 40px #0008,0 0 18px #ff476333}
 </style></head>
 <body><div class="app"><aside class="sidebar"><div class="logo">QH</div><button class="nav active" data-page="multiplayer"><span>⚔</span>Play</button><button class="nav" data-page="home"><span>⌂</span>Home</button><button class="nav" data-page="quiz"><span>🧠</span>Quiz</button><button class="nav" data-page="hack"><span>⚡</span>Hack</button><button class="nav" data-page="portfolio"><span>◈</span>Wallet</button><button class="nav" data-page="shop"><span>🛒</span>Shop</button><button class="nav" data-page="leaderboard"><span>🏆</span>Ranks</button><button class="nav" data-page="how"><span>?</span>How</button></aside><main class="main">
 <header class="top"><div class="brand"><h1>QuizHack Arena</h1><small>Learn • Challenge • Defend • Compete</small></div><div class="profile"><div class="avatar">🧑‍💻</div><div><strong id="playerName">Blaze</strong><small>Level <span id="levelTop">4</span> • <span id="xpTop">640</span> XP</small></div></div></header>
@@ -168,7 +171,7 @@ function saveActiveMatch(){if(roomId&&roomCode)localStorage.setItem(MATCH_KEY,JS
 function clearActiveMatch(){localStorage.removeItem(MATCH_KEY);}
 function getActiveMatch(){try{return JSON.parse(localStorage.getItem(MATCH_KEY)||"null")}catch(e){return null}}
 const $=id=>document.getElementById(id);const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
-function toast(t){const x=$("toast");x.textContent=t;x.style.display="block";clearTimeout(window.tt);window.tt=setTimeout(()=>x.style.display="none",2500)}
+function toast(t,kind="normal"){const x=$("toast");x.textContent=t;x.classList.toggle("toast-danger",kind==="danger");x.style.display="block";clearTimeout(window.tt);window.tt=setTimeout(()=>{x.style.display="none";x.classList.remove("toast-danger")},2500)}
 function log(t){for(const id of ["liveConsole"]){const x=$(id);if(x){x.textContent+="\n"+t;x.scrollTop=x.scrollHeight}}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));render()}
 function render(){["coins","pCoins"].forEach(id=>$(id)&&($(id).textContent=state.coins));$("shopCoins").textContent=state.coins+" XEO";$("playerName").textContent=state.name;$("levelTop").textContent=state.level;$("xpTop").textContent=state.xp;$("level").textContent=state.level;$("streak").textContent=state.streak;$("shield").textContent=state.shield;renderLeaderboard();renderTargets();renderDefense()}
@@ -526,7 +529,7 @@ async function submitAnswer(i){
     $("mFeedback").textContent="✓ Correct! +"+xpEarned+" XP and +15 XEO. "+(q.e||"");
   }else{
     $("mFeedback").textContent="✕ Wrong answer. Glitch Token earned. "+(q.e||"");
-    toast("Glitch Token earned!");
+    toast("⚠️ Glitch Token earned!", "danger");
   }
   await refreshRoom();await loadRoom();await syncProfile();await loadLeaderboard();
   const me=roomPlayers.find(p=>p.id===meId);
