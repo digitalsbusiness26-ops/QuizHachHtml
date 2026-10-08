@@ -26,13 +26,20 @@
 
 /* Red notification only for a wrong-answer Glitch Token. */
 .toast.toast-danger{background:#45191f;border:1px solid #ff647d;color:#ffb0b0;box-shadow:0 15px 40px #0008,0 0 18px #ff476333}
+
+/* v18.2: inline warning in the Live Match status strip */
+#matchAlertWrap{position:relative}
+#matchAlertWrap #matchAlert{padding-right:290px}
+#qhaTokenInlineWarning{position:absolute;right:12px;top:50%;transform:translateY(-50%);display:none;align-items:center;gap:7px;padding:9px 12px;border:1px solid #ff647d;border-radius:9px;background:#45191f;color:#ffb0b0;font-weight:700;font-size:13px;box-shadow:0 0 15px #ff476333;max-width:275px;pointer-events:none}
+#qhaTokenInlineWarning.show{display:flex}
+@media(max-width:850px){#matchAlertWrap #matchAlert{padding-right:12px;padding-bottom:62px}#qhaTokenInlineWarning{top:auto;bottom:8px;left:12px;right:auto;transform:none;max-width:calc(100% - 24px)}}
 </style></head>
 <body><div class="app"><aside class="sidebar"><div class="logo">QH</div><button class="nav active" data-page="multiplayer"><span>⚔</span>Play</button><button class="nav" data-page="home"><span>⌂</span>Home</button><button class="nav" data-page="quiz"><span>🧠</span>Quiz</button><button class="nav" data-page="hack"><span>⚡</span>Hack</button><button class="nav" data-page="portfolio"><span>◈</span>Wallet</button><button class="nav" data-page="shop"><span>🛒</span>Shop</button><button class="nav" data-page="leaderboard"><span>🏆</span>Ranks</button><button class="nav" data-page="how"><span>?</span>How</button></aside><main class="main">
 <header class="top"><div class="brand"><h1>QuizHack Arena</h1><small>Learn • Challenge • Defend • Compete</small></div><div class="profile"><div class="avatar">🧑‍💻</div><div><strong id="playerName">Blaze</strong><small>Level <span id="levelTop">4</span> • <span id="xpTop">640</span> XP</small></div></div></header>
 
 <section id="multiplayer" class="page active"><div class="grid"><div class="card hero"><div class="eyebrow">REAL-TIME MULTIPLAYER</div><h2>Enter the Cyber Quiz Arena.</h2><p>Create or join a room for 2–7 students. A match can start with only 2 players; Supabase synchronizes questions, XP, firewall, attacks, defenses, and match results.</p><div class="actions"><button class="btn primary" onclick="createRoom()">Create Room</button><button class="btn" onclick="joinRoom()">Join Room</button><button class="btn pink" onclick="quickMatch()">Quick Match</button></div><div class="section-title"><h3>Player</h3></div><input id="nameInput" maxlength="18" placeholder="Enter your player name"><div class="section-title"><h3>Room Code</h3><span id="connectionBadge" class="badge">CONNECTING</span></div><input id="roomInput" maxlength="8" placeholder="e.g. ABC123"></div><div class="card"><div class="section-title"><h3>Matchmaking</h3><span id="roomBadge" class="badge">NO ROOM</span></div><div id="lobbyStatus" class="feedback">Connecting to Supabase…</div><div class="list" id="lobbyPlayers"></div><div class="actions" style="margin-top:14px"><button class="btn primary" id="readyBtn" onclick="toggleReady()" disabled>I'm Ready</button><button class="btn" onclick="leaveRoom()">Leave Room</button></div><p class="muted">Rooms support up to 7 players and can start with 2. The game-only “hacking” mechanic changes firewall stats; it does not attack real computers.</p></div></div></section>
 
-<section id="match" class="page"><div class="card"><div class="section-title"><div><span class="eyebrow">LIVE MATCH</span><h2 id="matchTitle">Waiting for opponent…</h2></div><span class="badge">LIVE</span></div><div class="stats" id="matchStats"></div><div id="matchAlert" class="feedback">Multiplayer uses 10 questions drawn from the embedded 100-question HTML curriculum bank.</div></div><div class="grid" style="margin-top:18px"><div class="card"><div class="eyebrow">HTML BATTLE</div><div class="muted">HTML Match Question <span id="mQNum">—</span> of 10</div><div class="question" id="mQuestion">Waiting for the match to start…</div><div class="answers" id="mAnswers"></div><div class="feedback" id="mFeedback">Your answer is sent to Supabase.</div></div><div class="card"><div class="section-title"><h3>⚡ Glitch Attack</h3><span id="tokenBadge" class="badge">NO TOKEN</span></div><p class="muted">Each match uses 10 HTML questions drawn from the larger curriculum bank. A wrong HTML answer gives you one Glitch Token. CSS defense questions are separate and do not count toward the 10.</p><div class="section-title"><h3>Choose CSS Attack</h3><span id="attackCostBadge" class="badge">1 TOKEN</span></div><div id="cssAttackChoices" class="attack-choice-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">
+<section id="match" class="page"><div class="card"><div class="section-title"><div><span class="eyebrow">LIVE MATCH</span><h2 id="matchTitle">Waiting for opponent…</h2></div><span class="badge">LIVE</span></div><div class="stats" id="matchStats"></div><div id="matchAlertWrap"><div id="matchAlert" class="feedback">Multiplayer uses 10 questions drawn from the embedded 100-question HTML curriculum bank.</div><div id="qhaTokenInlineWarning" role="status" aria-live="polite">⚠️ Glitch Token earned! +1 Token</div></div></div><div class="grid" style="margin-top:18px"><div class="card"><div class="eyebrow">HTML BATTLE</div><div class="muted">HTML Match Question <span id="mQNum">—</span> of 10</div><div class="question" id="mQuestion">Waiting for the match to start…</div><div class="answers" id="mAnswers"></div><div class="feedback" id="mFeedback">Your answer is sent to Supabase.</div></div><div class="card"><div class="section-title"><h3>⚡ Glitch Attack</h3><span id="tokenBadge" class="badge">NO TOKEN</span></div><p class="muted">Each match uses 10 HTML questions drawn from the larger curriculum bank. A wrong HTML answer gives you one Glitch Token. CSS defense questions are separate and do not count toward the 10.</p><div class="section-title"><h3>Choose CSS Attack</h3><span id="attackCostBadge" class="badge">1 TOKEN</span></div><div id="cssAttackChoices" class="attack-choice-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">
 <button type="button" class="btn attack-choice" data-attack="style_glitch" onclick="selectCssAttack('style_glitch')">🎨 Style Glitch <span class="muted">1 token</span></button>
 <button type="button" class="btn attack-choice" data-attack="box_model_breach" onclick="selectCssAttack('box_model_breach')">📦 Box Model Breach <span class="muted">1 token</span></button>
 <button type="button" class="btn attack-choice" data-attack="flexbox_hijack" onclick="selectCssAttack('flexbox_hijack')">📐 Flexbox Hijack <span class="muted">2 tokens</span></button>
@@ -511,10 +518,22 @@ function animateLiveXP(xp,streakBonus){
     document.body.appendChild(sp);setTimeout(()=>sp.remove(),1400);
   }
 }
+function showInlineTokenWarning(){
+  const el=document.getElementById('qhaTokenInlineWarning');
+  if(!el)return;
+  clearTimeout(window.qhaTokenInlineTimer);
+  el.classList.add('show');
+  window.qhaTokenInlineTimer=setTimeout(()=>el.classList.remove('show'),5000);
+}
+function hideInlineTokenWarning(){
+  clearTimeout(window.qhaTokenInlineTimer);
+  document.getElementById('qhaTokenInlineWarning')?.classList.remove('show');
+}
 async function submitAnswer(i){
   if(!roomId||room?.status!=="playing"||qhaLiveAnswerBusy)return;
   const q=currentMatchQuestion();
   if(!q)return toast("Your 10 HTML match questions are complete.");
+  hideInlineTokenWarning();
   const correct=i===q.c;
   qhaLiveAnswerBusy=true;
   document.querySelectorAll("#mAnswers .answer").forEach(b=>b.disabled=true);
@@ -529,7 +548,7 @@ async function submitAnswer(i){
     $("mFeedback").textContent="✓ Correct! +"+xpEarned+" XP and +15 XEO. "+(q.e||"");
   }else{
     $("mFeedback").textContent="✕ Wrong answer. Glitch Token earned. "+(q.e||"");
-    toast("⚠️ Glitch Token earned!", "danger");
+    showInlineTokenWarning();
   }
   await refreshRoom();await loadRoom();await syncProfile();await loadLeaderboard();
   const me=roomPlayers.find(p=>p.id===meId);
