@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>QuizHack Arena v17.9 — Verified Firewall Alerts</title>
+<title>QuizHack Arena v18.4 — Full-Screen Confetti Celebration</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#05091a;--panel:#0b1129;--panel2:#101936;--line:#26345c;--cyan:#62e8ff;--pink:#ff5ccf;--green:#65f0a7;--yellow:#ffd76a;--text:#eef4ff;--muted:#8490b0;--danger:#ff6b8a}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at 20% 15%,#15245a 0,transparent 28%),radial-gradient(circle at 75% 30%,#27134c 0,transparent 25%),#05091a;color:var(--text);min-height:100vh}button,input{font:inherit}button{cursor:pointer}.app{display:grid;grid-template-columns:82px 1fr;min-height:100vh}.sidebar{border-right:1px solid #182447;background:#070d20;display:flex;flex-direction:column;align-items:center;padding:16px 8px;gap:10px}.logo{width:48px;height:48px;border:1px solid #2b477b;border-radius:14px;display:grid;place-items:center;color:var(--cyan);font-weight:900;box-shadow:0 0 22px #1be2ff22;margin-bottom:16px}.nav{width:100%;padding:11px 4px;border-radius:12px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:11px}.nav span{display:block;font-size:20px;margin-bottom:5px}.nav.active,.nav:hover{color:var(--text);border-color:#315080;background:#102044}.main{padding:22px 26px;max-width:1500px;width:100%;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:22px}.brand h1{font-size:25px;margin:0}.brand small,.profile small{color:var(--muted)}.profile{display:flex;align-items:center;gap:12px}.avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#1e4777,#9e45bc);border:2px solid #6ae7ff}.profile strong{display:block}.page{display:none}.page.active{display:block}.grid{display:grid;grid-template-columns:1.35fr .85fr;gap:18px}.card{background:linear-gradient(180deg,#0d1530e8,#080f25e8);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 14px 45px #0005}.hero{min-height:245px;position:relative;overflow:hidden;background:radial-gradient(circle at 30% 60%,#1a478e55 0 3%,transparent 18%),radial-gradient(circle at 70% 35%,#a835a744 0 3%,transparent 20%),linear-gradient(135deg,#0d1839,#080c20)}.hero:after{content:"";position:absolute;inset:-30%;background:repeating-radial-gradient(ellipse at center,transparent 0 45px,#31538a25 46px 47px);transform:rotate(-8deg)}.hero>*{position:relative;z-index:1}.eyebrow{color:var(--cyan);font-size:12px;letter-spacing:1.8px;text-transform:uppercase}.hero h2{font-size:32px;margin:8px 0}.hero p{max-width:620px;color:#b8c3df}.actions{display:flex;gap:10px;flex-wrap:wrap}.btn{border:1px solid #3d5687;background:#111e3f;color:var(--text);padding:10px 15px;border-radius:10px}.btn.primary{background:linear-gradient(90deg,#1c9fca,#8a4bd1);border:0}.btn.pink{background:#7d245e;border-color:#bd438f}.btn:disabled{opacity:.45;cursor:not-allowed}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}.stat{background:#0b1430;border:1px solid #24385f;border-radius:12px;padding:13px}.stat b{font-size:22px}.stat small{display:block;color:var(--muted);margin-top:4px}.section-title{display:flex;justify-content:space-between;align-items:center;margin:22px 0 10px}.section-title h3{margin:0}.muted{color:var(--muted)}.market{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.coin{padding:13px;border:1px solid #26375e;border-radius:12px;background:#0a132b}.coin b{font-size:18px}.up{color:var(--green)}.down{color:var(--danger)}.list{display:grid;gap:9px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #233457;background:#09122a;border-radius:11px}.question{font-size:25px;line-height:1.35;margin:14px 0 20px}.answers{display:grid;grid-template-columns:1fr 1fr;gap:12px}.answer{text-align:left;padding:16px;border:1px solid #2d416b;border-radius:12px;background:#0a1430;color:var(--text)}.answer:hover{border-color:var(--cyan);transform:translateY(-1px)}.answer.correct{border-color:var(--green);background:#0b3328}.answer.wrong{border-color:var(--danger);background:#351329}.feedback{min-height:44px;margin-top:14px;padding:12px;border-radius:10px;background:#09132b;color:#b9c5df}.hack-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.target{border:1px solid #30436e;border-radius:13px;padding:14px;background:#0a132b}.target.selected{border-color:var(--pink);box-shadow:0 0 20px #ff5ccf20}.shield{height:8px;background:#1d2947;border-radius:99px;overflow:hidden;margin:8px 0}.shield i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--pink))}.packet{border:1px dashed #79568d;padding:15px;border-radius:12px;background:#170f29;margin-top:12px}.terminal{background:#03060e;border:1px solid #203251;border-radius:12px;padding:14px;color:#7df7bd;font:12px ui-monospace,monospace;min-height:145px;white-space:pre-wrap}.shop{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:12px;border-bottom:1px solid #203050}.table th{color:var(--muted);font-size:12px;text-transform:uppercase}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#172648;color:var(--cyan);font-size:11px}.toast{position:fixed;right:22px;bottom:22px;background:#101d3c;border:1px solid #3b5a8e;padding:13px 16px;border-radius:11px;display:none;box-shadow:0 15px 40px #0008}input{background:#071127;color:var(--text);border:1px solid #2b416e;border-radius:9px;padding:10px;width:100%}@media(max-width:900px){.grid,.hack-grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.shop{grid-template-columns:1fr 1fr}}@media(max-width:650px){.app{grid-template-columns:1fr}.sidebar{position:sticky;top:0;z-index:10;flex-direction:row;overflow:auto;border-right:0;border-bottom:1px solid #182447}.logo{margin:0}.nav{min-width:68px}.main{padding:16px}.answers{grid-template-columns:1fr}.market{grid-template-columns:1fr}}
@@ -33,6 +33,17 @@
 #qhaTokenInlineWarning{position:absolute;right:12px;top:50%;transform:translateY(-50%);display:none;align-items:center;gap:7px;padding:9px 12px;border:1px solid #ff647d;border-radius:9px;background:#45191f;color:#ffb0b0;font-weight:700;font-size:13px;box-shadow:0 0 15px #ff476333;max-width:275px;pointer-events:none}
 #qhaTokenInlineWarning.show{display:flex}
 @media(max-width:850px){#matchAlertWrap #matchAlert{padding-right:12px;padding-bottom:62px}#qhaTokenInlineWarning{top:auto;bottom:8px;left:12px;right:auto;transform:none;max-width:calc(100% - 24px)}}
+
+/* v18.4 — full-screen falling confetti for the first-place winner */
+.qha-victory-layer{position:fixed;inset:0;z-index:10050;pointer-events:none;overflow:hidden;display:grid;place-items:center}
+.qha-victory-panel{position:relative;text-align:center;padding:28px 38px;border:2px solid #ffd76a;border-radius:24px;background:linear-gradient(145deg,#2d2259f5,#101b38f5);box-shadow:0 0 75px #ffd76a77,0 24px 80px #000b;animation:qhaVictoryAppear 5.7s ease-out both}
+.qha-victory-trophy{font-size:74px;filter:drop-shadow(0 0 24px #ffd76a)}
+.qha-victory-title{font-size:clamp(25px,5vw,48px);font-weight:1000;color:#ffe89a;text-shadow:0 0 22px #ffc94d}
+.qha-victory-sub{font-size:18px;color:#eef4ff;margin-top:8px}
+.qha-victory-confetti{position:absolute;top:-24px;left:var(--x);width:var(--w);height:var(--h);border-radius:var(--radius);background:var(--c);opacity:0;animation:qhaVictoryFall var(--dur) var(--delay) linear forwards;will-change:transform,opacity}
+@keyframes qhaVictoryAppear{0%{opacity:0;transform:scale(.4)}12%{opacity:1;transform:scale(1.13)}20%{transform:scale(1)}82%{opacity:1}100%{opacity:0;transform:scale(.95)}}
+@keyframes qhaVictoryFall{0%{opacity:0;transform:translate3d(0,-30px,0) rotate(0deg) rotateY(0deg)}8%{opacity:1}88%{opacity:1}100%{opacity:0;transform:translate3d(var(--drift),110vh,0) rotate(var(--spin)) rotateY(900deg)}}
+@media(prefers-reduced-motion:reduce){.qha-victory-panel,.qha-victory-confetti{animation:none}.qha-victory-confetti{display:none}}
 </style></head>
 <body><div class="app"><aside class="sidebar"><div class="logo">QH</div><button class="nav active" data-page="multiplayer"><span>⚔</span>Play</button><button class="nav" data-page="home"><span>⌂</span>Home</button><button class="nav" data-page="quiz"><span>🧠</span>Quiz</button><button class="nav" data-page="hack"><span>⚡</span>Hack</button><button class="nav" data-page="portfolio"><span>◈</span>Wallet</button><button class="nav" data-page="shop"><span>🛒</span>Shop</button><button class="nav" data-page="leaderboard"><span>🏆</span>Ranks</button><button class="nav" data-page="how"><span>?</span>How</button></aside><main class="main">
 <header class="top"><div class="brand"><h1>QuizHack Arena</h1><small>Learn • Challenge • Defend • Compete</small></div><div class="profile"><div class="avatar">🧑‍💻</div><div><strong id="playerName">Blaze</strong><small>Level <span id="levelTop">4</span> • <span id="xpTop">640</span> XP</small></div></div></header>
@@ -472,8 +483,46 @@ function renderMatch(){
   renderAttackChoice();
   updateAttackButton();
 }
+// Show the celebration only to the player ranked first, once per completed round.
+const qhaCelebratedRounds = new Set();
+function qhaCelebrateFirstPlace(winner){
+  if(!winner || winner.id!==meId || room?.status!=="finished")return;
+  const key=String(roomId)+":"+String(room?.round_number??0);
+  if(qhaCelebratedRounds.has(key))return;
+  qhaCelebratedRounds.add(key);
+  document.querySelectorAll(".qha-victory-layer").forEach(e=>e.remove());
+  const layer=document.createElement("div");
+  layer.className="qha-victory-layer";
+  const panel=document.createElement("div");
+  panel.className="qha-victory-panel";
+  const trophy=document.createElement("div");trophy.className="qha-victory-trophy";trophy.textContent="🏆";
+  const title=document.createElement("div");title.className="qha-victory-title";title.textContent="CHAMPION!";
+  const sub=document.createElement("div");sub.className="qha-victory-sub";sub.textContent="🥇 1ST PLACE — YOU WON!";
+  panel.append(trophy,title,sub);layer.append(panel);
+  if(!window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+    // Dense, staggered confetti shower: small paper ribbons, like the supplied reference.
+    const colors=["#ffcf27","#ff6a24","#f83b82","#874cff","#24bdf0","#12c9a4","#60d952","#ffffff"];
+    for(let i=0;i<220;i++){
+      const piece=document.createElement("span");piece.className="qha-victory-confetti";
+      const ribbon=Math.random()<.46;
+      piece.style.setProperty("--x",(Math.random()*100).toFixed(2)+"%");
+      piece.style.setProperty("--w",(ribbon?3+Math.random()*3:5+Math.random()*6).toFixed(1)+"px");
+      piece.style.setProperty("--h",(ribbon?12+Math.random()*15:5+Math.random()*7).toFixed(1)+"px");
+      piece.style.setProperty("--radius",ribbon?"3px":"1px");
+      piece.style.setProperty("--c",colors[i%colors.length]);
+      piece.style.setProperty("--dur",(3.1+Math.random()*2.0).toFixed(2)+"s");
+      piece.style.setProperty("--delay",(Math.random()*1.4).toFixed(2)+"s");
+      piece.style.setProperty("--drift",(-110+Math.random()*220).toFixed(0)+"px");
+      piece.style.setProperty("--spin",(540+Math.random()*1080).toFixed(0)+"deg");
+      layer.append(piece);
+    }
+  }
+  document.body.append(layer);
+  setTimeout(()=>layer.remove(),6200);
+}
 function renderPodium(){
   const ranked=[...roomPlayers].sort((a,b)=>(b.score||0)-(a.score||0)||(b.shield||0)-(a.shield||0)||(a.name||"").localeCompare(b.name||""));
+  qhaCelebrateFirstPlace(ranked[0]);
   const medals=["🥇","🥈","🥉"],labels=["1st Place","2nd Place","3rd Place"];
   $("podium").innerHTML=[0,1,2].map(i=>{
     const p=ranked[i];
