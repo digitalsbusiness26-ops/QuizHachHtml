@@ -80,9 +80,23 @@
 .qha-ach-toast{position:fixed;z-index:10045;left:50%;top:12%;transform:translateX(-50%);background:linear-gradient(135deg,#32215c,#152e51);border:2px solid #ffd76a;border-radius:20px;padding:20px 28px;text-align:center;box-shadow:0 0 55px #ffda7a66;animation:qhaBadgeIn 3.8s ease forwards;pointer-events:none}
 @keyframes qhaBadgeIn{0%{opacity:0;transform:translate(-50%,-20px) scale(.8)}12%,80%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-35px)}}
 @media(prefers-reduced-motion:reduce){.qha-ach-toast{animation:none}}
+
+/* v18.8 cosmetic previews */
+.qha-cosmetic-catalog{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:14px;margin-top:20px}
+.qha-cosmetic-item{border:1px solid #344a7a;background:#0a1531;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:9px}
+.qha-cosmetic-item .art{font-size:38px;text-align:center;padding:14px;background:#101f42;border-radius:12px}
+.qha-cosmetic-item small{color:#aebde0;min-height:38px}
+.qha-cosmetic-item button{margin-top:auto}
+.qha-cosmetic-preview{display:flex;align-items:center;gap:18px;padding:18px;border:1px solid #365385;border-radius:14px;background:#0c1938;margin-top:14px}
+.qha-avatar-preview{width:82px;height:82px;font-size:42px;flex-shrink:0}
+.qha-frame-neon{border:3px solid #62e8ff!important;box-shadow:0 0 19px #62e8ff99}
+.qha-frame-gold{border:4px double #ffd76a!important;box-shadow:0 0 23px #ffd76a99}
+.qha-name-electric{color:#62e8ff;text-shadow:0 0 13px #62e8ff}
+.qha-name-royal{color:#ff8fdb;text-shadow:0 0 13px #ff5ccf}
+.qha-victory-aurora{color:#62e8ff}.qha-victory-royal{color:#ffd76a}
 </style></head>
-<body><div class="app"><aside class="sidebar"><div class="logo">QH</div><button class="nav active" data-page="multiplayer"><span>⚔</span>Play</button><button class="nav" data-page="home"><span>⌂</span>Home</button><button class="nav" data-page="quiz"><span>🧠</span>Quiz</button><button class="nav" data-page="hack"><span>⚡</span>Hack</button><button class="nav" data-page="portfolio"><span>◈</span>Wallet</button><button class="nav" data-page="shop"><span>🛒</span>Shop</button><button class="nav" data-page="leaderboard"><span>🏆</span>Ranks</button><button class="nav" data-page="achievements"><span>🏅</span>Badges</button><button class="nav" data-page="how"><span>?</span>How</button></aside><main class="main">
-<header class="top"><div class="brand"><h1>QuizHack Arena</h1><small>Learn • Challenge • Defend • Compete</small></div><div class="profile"><div class="avatar">🧑‍💻</div><div><strong id="playerName">Blaze</strong><small>Level <span id="levelTop">4</span> • <span id="xpTop">640</span> XP</small></div></div></header>
+<body><div class="app"><aside class="sidebar"><div class="logo">QH</div><button class="nav active" data-page="multiplayer"><span>⚔</span>Play</button><button class="nav" data-page="home"><span>⌂</span>Home</button><button class="nav" data-page="quiz"><span>🧠</span>Quiz</button><button class="nav" data-page="hack"><span>⚡</span>Hack</button><button class="nav" data-page="portfolio"><span>◈</span>Wallet</button><button class="nav" data-page="shop"><span>🛒</span>Shop</button><button class="nav" data-page="leaderboard"><span>🏆</span>Ranks</button><button class="nav" data-page="achievements"><span>🏅</span>Badges</button><button class="nav" data-page="how"><span>?</span>How</button><button class="nav" data-page="cosmetics"><span>🎭</span>Style</button></aside><main class="main">
+<header class="top"><div class="brand"><h1>QuizHack Arena</h1><small>Learn • Challenge • Defend • Compete</small></div><div class="profile"><div class="avatar" id="qhaTopAvatar">🧑‍💻</div><div><strong id="playerName">Blaze</strong><small>Level <span id="levelTop">4</span> • <span id="xpTop">640</span> XP</small></div></div></header>
 
 <section id="multiplayer" class="page active"><div class="grid"><div class="card hero"><div class="eyebrow">REAL-TIME MULTIPLAYER</div><h2>Enter the Cyber Quiz Arena.</h2><p>Create or join a room for 2–7 students. A match can start with only 2 players; Supabase synchronizes questions, XP, firewall, attacks, defenses, and match results.</p><div class="actions"><button class="btn primary" onclick="createRoom()">Create Room</button><button class="btn" onclick="joinRoom()">Join Room</button><button class="btn pink" onclick="quickMatch()">Quick Match</button></div><div class="section-title"><h3>Player</h3></div><input id="nameInput" maxlength="18" placeholder="Enter your player name"><div class="section-title"><h3>Room Code</h3><span id="connectionBadge" class="badge">CONNECTING</span></div><input id="roomInput" maxlength="8" placeholder="e.g. ABC123"></div><div class="card"><div class="section-title"><h3>Matchmaking</h3><span id="roomBadge" class="badge">NO ROOM</span></div><div id="lobbyStatus" class="feedback">Connecting to Supabase…</div><div class="list" id="lobbyPlayers"></div><div class="actions" style="margin-top:14px"><button class="btn primary" id="readyBtn" onclick="toggleReady()" disabled>I'm Ready</button><button class="btn" onclick="leaveRoom()">Leave Room</button></div><p class="muted">Rooms support up to 7 players and can start with 2. The game-only “hacking” mechanic changes firewall stats; it does not attack real computers.</p></div></div></section>
 
@@ -104,6 +118,7 @@
   </div>
 </div></section>
 
+<section id="cosmetics" class="page"><div class="card"><div class="section-title"><div><span class="eyebrow">v18.8 · COSMETIC ONLY</span><h2>🎭 Avatar & Profile Customization</h2></div><span class="badge" id="qhaCosmeticWallet">Loading XEO…</span></div><p class="muted">Customize your appearance without changing XP, score, firewall, or attack power. Purchases are permanent and saved to Supabase.</p><div class="qha-cosmetic-preview"><div id="qhaPreviewAvatar" class="avatar qha-avatar-preview">🧑‍💻</div><div><strong id="qhaPreviewName">Player</strong><div class="muted" id="qhaPreviewTheme">Default victory theme</div></div></div><div id="qhaCosmeticStatus" class="feedback">Loading cosmetics…</div><div id="qhaCosmeticCatalog" class="qha-cosmetic-catalog"></div><button class="btn" onclick="qhaLoadCosmetics()" style="margin-top:14px">Refresh Cosmetics</button></div></section>
 <section id="home" class="page"><div class="grid"><div class="card hero"><div class="eyebrow">Educational cyber game</div><h2>Turn knowledge into a digital battle.</h2><p>Answer HTML questions to earn XP and fictional XEO coins. Wrong answers can become harmless game-only glitch packets.</p><div class="actions"><button class="btn primary" onclick="showPage('quiz')">Start Quiz</button><button class="btn pink" onclick="showPage('hack')">Enter Hack Arena</button></div><div class="stats"><div class="stat"><b id="coins">1250</b><small>XEO Balance</small></div><div class="stat"><b id="streak">5</b><small>Day Streak</small></div><div class="stat"><b id="level">4</b><small>Level</small></div><div class="stat"><b id="shield">82</b><small>Firewall %</small></div></div></div><div class="card"><div class="section-title"><h3>Live-looking Market</h3><span class="badge">FICTIONAL</span></div><div class="market"><div class="coin"><small>XEO</small><br><b>$12.48</b><br><span class="up">+4.8%</span></div><div class="coin"><small>BYTE</small><br><b>$3.21</b><br><span class="up">+1.9%</span></div><div class="coin"><small>GLCH</small><br><b>$0.84</b><br><span class="down">-2.2%</span></div></div></div></div></section>
 
 <section id="quiz" class="page"><div class="card" style="max-width:900px;margin:auto"><div class="eyebrow">HTML Practice Library</div><h2>Knowledge Challenge</h2><div class="muted">Practice Question <span id="qnum">1</span> <span class="muted">• no match limit</span></div><div class="question" id="question"></div><div class="answers" id="answers"></div><div class="feedback" id="feedback">Choose an answer.</div><div id="qhaPracticeLearning" class="qha-learning" style="display:none" aria-live="polite"></div><div class="actions" style="margin-top:14px"><button class="btn" id="nextBtn" onclick="nextQuestion()" disabled>Next Question</button><button class="btn" onclick="showPage('multiplayer')">Play Multiplayer</button></div></div></section>
@@ -230,6 +245,62 @@ async function qhaLoadAchievements(){
 setInterval(()=>{if(roomId&&room?.status==='playing'||currentPage==='achievements')qhaCheckNewBadges()},9000);
 
 
+/* v18.8 cosmetic catalog: server-side purchasing and ownership */
+const QHA_COSMETICS=[
+ ['avatar','default_avatar','🧑‍💻','Coder','Default student avatar',0],
+ ['avatar','avatar_nova','🦸','Nova','Cyber hero character',500],
+ ['avatar','avatar_robot','🤖','Byte Bot','Robot character',500],
+ ['frame','default_frame','⭕','Classic','Standard avatar border',0],
+ ['frame','frame_neon','💠','Neon Circuit','Glowing cyan frame',150],
+ ['frame','frame_gold','👑','Golden Champion','Golden animated-style frame',350],
+ ['nameplate','default_nameplate','✍️','Classic Name','Standard player name',0],
+ ['nameplate','name_electric','⚡','Electric','Glowing cyan nameplate',400],
+ ['nameplate','name_royal','💜','Royal','Pink neon nameplate',400],
+ ['victory','default_victory','🏆','Classic Victory','Standard champion celebration',0],
+ ['victory','victory_aurora','🌌','Aurora Victory','Cyan champion celebration',750],
+ ['victory','victory_royal','✨','Royal Victory','Gold champion celebration',750]
+];
+let qhaCosmeticData=null,qhaCosmeticBusy=false;
+const qhaCosmeticDefaults={avatar:'default_avatar',frame:'default_frame',nameplate:'default_nameplate',victory:'default_victory'};
+function qhaApplyCosmetics(data){
+ const eq={...qhaCosmeticDefaults,...(data?.equipped||{})};
+ const icon=QHA_COSMETICS.find(x=>x[1]===eq.avatar)?.[2]||'🧑‍💻';
+ for(const id of ['qhaTopAvatar','qhaPreviewAvatar']){const el=$(id);if(!el)continue;el.textContent=icon;el.classList.remove('qha-frame-neon','qha-frame-gold');if(eq.frame==='frame_neon')el.classList.add('qha-frame-neon');if(eq.frame==='frame_gold')el.classList.add('qha-frame-gold')}
+ for(const id of ['playerName','qhaPreviewName']){const el=$(id);if(!el)continue;el.classList.remove('qha-name-electric','qha-name-royal');if(eq.nameplate==='name_electric')el.classList.add('qha-name-electric');if(eq.nameplate==='name_royal')el.classList.add('qha-name-royal')}
+ if($('qhaPreviewName'))$('qhaPreviewName').textContent=state.name;
+ if($('qhaPreviewTheme'))$('qhaPreviewTheme').textContent=QHA_COSMETICS.find(x=>x[1]===eq.victory)?.[3]||'Classic Victory';
+ window.qhaEquippedVictory=eq.victory;
+ document.querySelectorAll('.qha-victory-panel').forEach(el=>{el.style.borderColor=eq.victory==='victory_aurora'?'#62e8ff':eq.victory==='victory_royal'?'#ffd76a':'';el.style.boxShadow=eq.victory==='victory_aurora'?'0 0 85px #62e8ff88,0 24px 80px #000b':''});
+}
+async function qhaLoadCosmetics(){
+ if(qhaCosmeticBusy)return;qhaCosmeticBusy=true;
+ try{
+  await connect();await ensureProfile();
+  const r=await sb.rpc('qha_cosmetics_state');if(r.error)throw r.error;
+  qhaCosmeticData=r.data;qhaApplyCosmetics(r.data);
+  const owned=new Set(r.data.owned||[]),eq={...qhaCosmeticDefaults,...(r.data.equipped||{})};
+  if($('qhaCosmeticWallet'))$('qhaCosmeticWallet').textContent=`${r.data.coins} XEO`;
+  if($('qhaCosmeticStatus'))$('qhaCosmeticStatus').textContent='Your cosmetic purchases and equipped styles are saved to Supabase.';
+  if($('qhaCosmeticCatalog'))$('qhaCosmeticCatalog').innerHTML=QHA_COSMETICS.map(([kind,code,icon,name,desc,price])=>{
+    const isOwned=price===0||owned.has(code),isEquipped=eq[kind]===code;
+    return `<div class="qha-cosmetic-item"><div class="art">${icon}</div><strong>${name}</strong><span class="badge">${kind.toUpperCase()}</span><small>${desc}</small><b>${price?price+' XEO':'FREE'}</b><button class="btn ${isEquipped?'':'primary'}" ${isEquipped?'disabled':''} onclick="qhaChooseCosmetic('${code}')">${isEquipped?'✓ Equipped':isOwned?'Equip':'Unlock · '+price+' XEO'}</button></div>`;
+  }).join('');
+ }catch(e){if($('qhaCosmeticStatus'))$('qhaCosmeticStatus').textContent='Could not load cosmetics: '+e.message;log('[cosmetics] '+e.message)}
+ finally{qhaCosmeticBusy=false}
+}
+async function qhaChooseCosmetic(code){
+ if(qhaCosmeticBusy)return;
+ const item=QHA_COSMETICS.find(x=>x[1]===code);if(!item)return;
+ if(item[5]&&!new Set(qhaCosmeticData?.owned||[]).has(code)&&!confirm(`Unlock ${item[3]} for ${item[5]} XEO?`))return;
+ qhaCosmeticBusy=true;
+ try{
+  const r=await sb.rpc('qha_buy_or_equip_cosmetic',{p_item_code:code});if(r.error)throw r.error;
+  toast('✓ '+item[3]+' equipped!');
+ }catch(e){toast(e.message);log('[cosmetics] '+e.message)}
+ finally{qhaCosmeticBusy=false}
+ await qhaLoadCosmetics();
+}
+
 const TOKEN_CAP=5; // Maximum Glitch Tokens a player can carry.
 
 const QUESTION_PROGRESS_KEY="qha-html-bank-progress-v1";
@@ -334,6 +405,7 @@ function showPage(id){
   if(id==="quiz")loadQuestion();
   if(id==="leaderboard")loadLeaderboard();
   if(id==="achievements")qhaLoadAchievements();
+  if(id==="cosmetics")qhaLoadCosmetics();
   if(id==="match"){renderMatch();refreshPackets()}
 }
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>showPage(b.dataset.page));
@@ -1123,5 +1195,5 @@ function drawCryptoChart(){
 }
 function startCryptoMarket(){if(cryptoTimer)return;renderCryptoMarket();cryptoTimer=setInterval(tickCryptoMarket,3000)}
 
-window.addEventListener("load",()=>{startCryptoMarket();renderBankProgress();boot()});
+window.addEventListener("load",()=>{startCryptoMarket();renderBankProgress();boot();setTimeout(()=>qhaLoadCosmetics(),1600)});
 </script></body></html>
