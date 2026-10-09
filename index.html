@@ -53,6 +53,19 @@
 .qha-victory-leave{margin-top:22px;padding:13px 26px;font-size:17px;font-weight:800;pointer-events:auto;position:relative;z-index:3}
 .qha-victory-leave:disabled{opacity:.6;cursor:wait}
 @media(prefers-reduced-motion:reduce){.qha-victory-panel{animation:none;opacity:1;transform:none}}
+
+/* v18.5: cinematic multiplayer introduction and non-blocking streak banners */
+.qha-vs-layer{position:fixed;inset:0;z-index:10035;display:grid;place-items:center;pointer-events:none;background:radial-gradient(circle at center,#182f6cf0,#05091af5);overflow:hidden;animation:qhaVsFadeIn .25s ease-out}
+.qha-vs-card{width:min(760px,calc(100vw - 30px));text-align:center;padding:32px 20px;border:1px solid #4b69b4;border-radius:26px;background:linear-gradient(135deg,#101e45,#2c174e);box-shadow:0 0 80px #62e8ff33}
+.qha-vs-eyebrow{font-size:13px;letter-spacing:4px;color:#62e8ff;font-weight:900}
+.qha-vs-names{display:flex;justify-content:center;align-items:center;gap:clamp(10px,4vw,35px);margin:26px 0;flex-wrap:wrap}
+.qha-vs-player{flex:1 1 150px;min-width:0;max-width:270px;overflow-wrap:anywhere;font-weight:900;font-size:clamp(18px,4vw,33px);color:#eef4ff}
+.qha-vs-symbol{font-weight:1000;font-size:clamp(38px,8vw,80px);color:#ffcf55;text-shadow:0 0 26px #ffab3b;animation:qhaVsPulse .7s ease-in-out infinite alternate}
+.qha-vs-count{font-weight:1000;font-size:clamp(48px,11vw,94px);color:#65f0a7;text-shadow:0 0 24px #65f0a7}
+.qha-combo-banner{position:fixed;z-index:10025;top:17%;left:50%;transform:translateX(-50%);max-width:calc(100vw - 28px);text-align:center;pointer-events:none;padding:17px 26px;border:2px solid #ffd76a;border-radius:18px;background:#241b43f5;box-shadow:0 0 36px #ffd76a77;animation:qhaComboPop 1.8s ease-out forwards}
+.qha-combo-banner strong{display:block;color:#ffe99c;font-size:clamp(20px,5vw,36px);white-space:nowrap}.qha-combo-banner small{color:#eef4ff;font-size:14px}
+@keyframes qhaVsFadeIn{from{opacity:0}to{opacity:1}}@keyframes qhaVsPulse{to{transform:scale(1.12)}}@keyframes qhaComboPop{0%{opacity:0;transform:translate(-50%,-15px) scale(.75)}18%{opacity:1;transform:translate(-50%,0) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-35px) scale(.95)}}
+@media(prefers-reduced-motion:reduce){.qha-vs-layer,.qha-vs-symbol,.qha-combo-banner{animation:none}}
 </style></head>
 <body><div class="app"><aside class="sidebar"><div class="logo">QH</div><button class="nav active" data-page="multiplayer"><span>⚔</span>Play</button><button class="nav" data-page="home"><span>⌂</span>Home</button><button class="nav" data-page="quiz"><span>🧠</span>Quiz</button><button class="nav" data-page="hack"><span>⚡</span>Hack</button><button class="nav" data-page="portfolio"><span>◈</span>Wallet</button><button class="nav" data-page="shop"><span>🛒</span>Shop</button><button class="nav" data-page="leaderboard"><span>🏆</span>Ranks</button><button class="nav" data-page="how"><span>?</span>How</button></aside><main class="main">
 <header class="top"><div class="brand"><h1>QuizHack Arena</h1><small>Learn • Challenge • Defend • Compete</small></div><div class="profile"><div class="avatar">🧑‍💻</div><div><strong id="playerName">Blaze</strong><small>Level <span id="levelTop">4</span> • <span id="xpTop">640</span> XP</small></div></div></header>
@@ -414,6 +427,7 @@ function renderLobby(){$("lobbyPlayers").innerHTML=roomPlayers.map((p,i)=>`<div 
 function subscribe(){if(channel)sb.removeChannel(channel);channel=sb.channel("qha-"+roomId).on("postgres_changes",{event:"*",schema:"public",table:"game_players",filter:"room_id=eq."+roomId},refreshRoom).on("postgres_changes",{event:"*",schema:"public",table:"game_rooms",filter:"id=eq."+roomId},loadRoom).on("postgres_changes",{event:"*",schema:"public",table:"game_packets",filter:"room_id=eq."+roomId},refreshPackets).subscribe(status=>log("[realtime] "+status))}
 async function toggleReady(){if(!roomId)return;try{ready=!ready;const r=await sb.rpc("set_ready",{p_room_id:roomId,p_ready:ready});if(r.error){ready=!ready;throw r.error}$("readyBtn").textContent=ready?"Ready ✓":"I'm Ready";await refreshRoom();await loadRoom()}catch(e){toast(e.message);log("[error] "+e.message)}}
 async function leaveRoom(){
+  qhaClearVsIntro();
   const leavingRoomId=roomId;
   const leavingMeId=meId;
   try{
@@ -460,9 +474,55 @@ if(room.status==="finished"&&roomId){
 }
 if(window.qhaLoadedRound!==room.round_number){window.qhaLoadedRound=room.round_number;window.matchQuestionSet=[];}if(room.status==="playing"||room.status==="finished"){renderMatch();await refreshPackets();if(currentPage==="multiplayer")showPage("match")}}
 function normalize(q){if(!q)return null;if(typeof q==="string")try{q=JSON.parse(q)}catch(e){return null}if(q.text&&Array.isArray(q.options))return {q:q.text,a:q.options,number:room?.question_number};if(q.q&&Array.isArray(q.a))return q;return null}
+// v18.5: one introduction per active room/round, no change to server match timing.
+const qhaIntroducedRounds=new Set();
+let qhaVsTimer=null;
+function qhaClearVsIntro(){
+  if(qhaVsTimer){clearInterval(qhaVsTimer);qhaVsTimer=null;}
+  document.querySelectorAll('.qha-vs-layer').forEach(el=>el.remove());
+}
+function qhaMaybeShowVsIntro(){
+  if(!roomId||room?.status!=="playing"||roomPlayers.length<2)return;
+  const me=roomPlayers.find(p=>p.id===meId);
+  if(!me||Number(me.match_questions_answered||0)>0)return;
+  const key=String(roomId)+":"+String(room?.round_number??0);
+  if(qhaIntroducedRounds.has(key))return;
+  qhaIntroducedRounds.add(key);
+  qhaClearVsIntro();
+  const opponents=roomPlayers.filter(p=>p.id!==meId);
+  const layer=document.createElement('div');layer.className='qha-vs-layer';layer.setAttribute('aria-live','polite');
+  const card=document.createElement('div');card.className='qha-vs-card';
+  const eyebrow=document.createElement('div');eyebrow.className='qha-vs-eyebrow';eyebrow.textContent='CYBER BATTLE STARTING';
+  const names=document.createElement('div');names.className='qha-vs-names';
+  const mine=document.createElement('div');mine.className='qha-vs-player';mine.textContent=me.name+' (YOU)';
+  const versus=document.createElement('div');versus.className='qha-vs-symbol';versus.textContent='VS';
+  const theirs=document.createElement('div');theirs.className='qha-vs-player';theirs.textContent=opponents.map(p=>p.name).join(' • ');
+  names.append(mine,versus,theirs);
+  const countdown=document.createElement('div');countdown.className='qha-vs-count';
+  card.append(eyebrow,names,countdown);layer.append(card);document.body.append(layer);
+  let seconds=3;countdown.textContent=String(seconds);
+  qhaVsTimer=setInterval(()=>{
+    if(!roomId||room?.status!=="playing"||!document.body.contains(layer)){qhaClearVsIntro();return;}
+    seconds--;
+    if(seconds===0){countdown.textContent='BATTLE!';}
+    else if(seconds<0){qhaClearVsIntro();}
+    else countdown.textContent=String(seconds);
+  },850);
+}
+function qhaShowCombo(streak,answered){
+  const milestones={3:'🔥 HOT STREAK!',5:'⚡ UNSTOPPABLE!',10:'🏆 PERFECT RUN!'};
+  const label=answered===10&&streak===10?milestones[10]:milestones[streak];
+  if(!label)return;
+  document.querySelectorAll('.qha-combo-banner').forEach(el=>el.remove());
+  const el=document.createElement('div');el.className='qha-combo-banner';
+  const title=document.createElement('strong');title.textContent=label;
+  const sub=document.createElement('small');sub.textContent=streak+' correct answers in a row';
+  el.append(title,sub);document.body.append(el);setTimeout(()=>el.remove(),1800);
+}
 function renderMatch(){
   const me=roomPlayers.find(p=>p.id===meId),others=roomPlayers.filter(p=>p.id!==meId);
   const finished=room?.status==="finished";
+  if(!finished)qhaMaybeShowVsIntro();
   $("matchTitle").textContent=finished?"Match Complete":(roomPlayers.length>=2?`${roomPlayers.length}-Player Cyber Battle`:"Live Match");
   $("matchStats").innerHTML=roomPlayers.map(p=>`<div class="stat"><b>${esc(p.name)}${p.id===meId?' (You)':''}</b><small>Answered ${p.match_questions_answered||0}/10 • Score ${p.score||0}/10 • Lv ${p.level||1} • ${p.xp||0} XP • ${p.coins||0} XEO • ${p.tokens||0} Tokens • Firewall ${p.shield??100}%</small></div>`).join("");
 
@@ -632,6 +692,7 @@ async function submitAnswer(i){
   catch(e){qhaLiveAnswerBusy=false;renderMatch();return toast("Could not submit answer. Please retry.")}
   if(r.error){qhaLiveAnswerBusy=false;renderMatch();return toast(r.error.message)}
   if(correct){
+    qhaShowCombo(Number(r.data?.correct_streak||0),Number(r.data?.questions_answered||0));
     const xpEarned=Number(r.data?.xp_earned??10);
     const streakBonus=Boolean(r.data?.streak_bonus);
     animateLiveXP(xpEarned,streakBonus);
