@@ -2,8 +2,64 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>QuizHack Arena v18.6 — Learn From Every Wrong Answer</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>QuizHack Arena v18.7 — Achievement Badges</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+/* v18.7: badges are read from Supabase; client never grants them. */
+const QHA_BADGES=[
+ ['html_rookie','🧩','HTML Rookie','10 correct multiplayer HTML answers'],
+ ['css_defender','🛡️','CSS Defender','5 successful timed CSS defenses'],
+ ['firewall_guardian','🔥','Firewall Guardian','Finish a match with 80+ firewall'],
+ ['perfect_10','🌟','Perfect 10','10 correct answers in one match'],
+ ['comeback_champion','🚀','Comeback Champion','Win a match after trailing'],
+ ['arena_champion','🏆','Arena Champion','Win a multiplayer match']
+];
+let qhaEarned=new Set(),qhaBadgesInitialized=false,qhaBadgeMap={};
+function qhaBadgeSummary(uid){
+ const codes=qhaBadgeMap[String(uid)]||[];
+ return codes.slice(0,3).map(code=>{const b=QHA_BADGES.find(x=>x[0]===code);return b?`<span title="${b[2]}">${b[1]}</span>`:''}).join('');
+}
+function qhaBadgeTiles(codes){
+ const got=new Set(codes||[]);
+ return QHA_BADGES.map(([code,icon,name,desc])=>`<div class="qha-ach ${got.has(code)?'unlocked':''}"><span class="qha-ach-icon">${got.has(code)?icon:'🔒'}</span><strong>${name}</strong><small>${desc}</small><br><small>${got.has(code)?'✓ UNLOCKED':'LOCKED'}</small></div>`).join('');
+}
+async function qhaFetchBadges(uid){
+ if(!uid)return [];
+ const r=await sb.rpc('qha_get_badges',{p_player_id:uid});
+ if(r.error){log('[badges] '+r.error.message);return null;}
+ return (r.data||[]).map(x=>x.badge_code);
+}
+async function qhaCheckNewBadges(){
+ try{
+ const uid=(await sb.auth.getUser()).data.user?.id;
+ if(!uid)return;
+ const codes=await qhaFetchBadges(uid);if(!codes)return;
+ qhaBadgeMap[uid]=codes;
+ if(qhaBadgesInitialized){for(const code of codes){if(!qhaEarned.has(code)){
+ const b=QHA_BADGES.find(x=>x[0]===code);if(b){const el=document.createElement('div');el.className='qha-ach-toast';el.innerHTML=`<div style="font-size:48px">${b[1]}</div><strong>ACHIEVEMENT UNLOCKED!</strong><div>${b[2]}</div>`;document.body.appendChild(el);setTimeout(()=>el.remove(),3900);}
+ }}}
+ qhaEarned=new Set(codes);qhaBadgesInitialized=true;
+ if(currentPage==='achievements')document.getElementById('qhaMyAchievements').innerHTML=qhaBadgeTiles(codes);
+ }catch(e){log('[badges] '+e.message)}
+}
+async function qhaLoadBadgeSummaries(){
+ const ids=[...new Set(leaderboardRows.map(x=>x.id).filter(Boolean))];
+ await Promise.all(ids.slice(0,100).map(async id=>{const badges=await qhaFetchBadges(id);if(badges)qhaBadgeMap[id]=badges;}));
+ document.querySelectorAll('[data-badge-player]').forEach(el=>{el.innerHTML=qhaBadgeSummary(el.dataset.badgePlayer)});
+}
+async function qhaLoadAchievements(){
+ const uid=(await sb.auth.getUser()).data.user?.id;
+ await qhaCheckNewBadges();
+ const my=document.getElementById('qhaMyAchievements');if(my)my.innerHTML=qhaBadgeTiles(qhaBadgeMap[uid]||[]);
+ const sel=document.getElementById('qhaBadgePlayerSelect');
+ const r=await sb.rpc('get_leaderboard',{p_limit:100});
+ const rows=r.data||[];
+ sel.innerHTML='<option value="">Choose a classmate</option>'+rows.filter(p=>p.id&&p.id!==uid).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+ sel.onchange=async()=>{const codes=await qhaFetchBadges(sel.value);document.getElementById('qhaOtherAchievements').innerHTML=qhaBadgeTiles(codes||[])};
+ document.getElementById('qhaOtherAchievements').innerHTML='';
+}
+setInterval(()=>{if(roomId&&room?.status==='playing'||currentPage==='achievements')qhaCheckNewBadges()},9000);
+
+</script>
 <style>
 :root{--bg:#05091a;--panel:#0b1129;--panel2:#101936;--line:#26345c;--cyan:#62e8ff;--pink:#ff5ccf;--green:#65f0a7;--yellow:#ffd76a;--text:#eef4ff;--muted:#8490b0;--danger:#ff6b8a}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at 20% 15%,#15245a 0,transparent 28%),radial-gradient(circle at 75% 30%,#27134c 0,transparent 25%),#05091a;color:var(--text);min-height:100vh}button,input{font:inherit}button{cursor:pointer}.app{display:grid;grid-template-columns:82px 1fr;min-height:100vh}.sidebar{border-right:1px solid #182447;background:#070d20;display:flex;flex-direction:column;align-items:center;padding:16px 8px;gap:10px}.logo{width:48px;height:48px;border:1px solid #2b477b;border-radius:14px;display:grid;place-items:center;color:var(--cyan);font-weight:900;box-shadow:0 0 22px #1be2ff22;margin-bottom:16px}.nav{width:100%;padding:11px 4px;border-radius:12px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:11px}.nav span{display:block;font-size:20px;margin-bottom:5px}.nav.active,.nav:hover{color:var(--text);border-color:#315080;background:#102044}.main{padding:22px 26px;max-width:1500px;width:100%;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:22px}.brand h1{font-size:25px;margin:0}.brand small,.profile small{color:var(--muted)}.profile{display:flex;align-items:center;gap:12px}.avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#1e4777,#9e45bc);border:2px solid #6ae7ff}.profile strong{display:block}.page{display:none}.page.active{display:block}.grid{display:grid;grid-template-columns:1.35fr .85fr;gap:18px}.card{background:linear-gradient(180deg,#0d1530e8,#080f25e8);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 14px 45px #0005}.hero{min-height:245px;position:relative;overflow:hidden;background:radial-gradient(circle at 30% 60%,#1a478e55 0 3%,transparent 18%),radial-gradient(circle at 70% 35%,#a835a744 0 3%,transparent 20%),linear-gradient(135deg,#0d1839,#080c20)}.hero:after{content:"";position:absolute;inset:-30%;background:repeating-radial-gradient(ellipse at center,transparent 0 45px,#31538a25 46px 47px);transform:rotate(-8deg)}.hero>*{position:relative;z-index:1}.eyebrow{color:var(--cyan);font-size:12px;letter-spacing:1.8px;text-transform:uppercase}.hero h2{font-size:32px;margin:8px 0}.hero p{max-width:620px;color:#b8c3df}.actions{display:flex;gap:10px;flex-wrap:wrap}.btn{border:1px solid #3d5687;background:#111e3f;color:var(--text);padding:10px 15px;border-radius:10px}.btn.primary{background:linear-gradient(90deg,#1c9fca,#8a4bd1);border:0}.btn.pink{background:#7d245e;border-color:#bd438f}.btn:disabled{opacity:.45;cursor:not-allowed}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}.stat{background:#0b1430;border:1px solid #24385f;border-radius:12px;padding:13px}.stat b{font-size:22px}.stat small{display:block;color:var(--muted);margin-top:4px}.section-title{display:flex;justify-content:space-between;align-items:center;margin:22px 0 10px}.section-title h3{margin:0}.muted{color:var(--muted)}.market{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.coin{padding:13px;border:1px solid #26375e;border-radius:12px;background:#0a132b}.coin b{font-size:18px}.up{color:var(--green)}.down{color:var(--danger)}.list{display:grid;gap:9px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #233457;background:#09122a;border-radius:11px}.question{font-size:25px;line-height:1.35;margin:14px 0 20px}.answers{display:grid;grid-template-columns:1fr 1fr;gap:12px}.answer{text-align:left;padding:16px;border:1px solid #2d416b;border-radius:12px;background:#0a1430;color:var(--text)}.answer:hover{border-color:var(--cyan);transform:translateY(-1px)}.answer.correct{border-color:var(--green);background:#0b3328}.answer.wrong{border-color:var(--danger);background:#351329}.feedback{min-height:44px;margin-top:14px;padding:12px;border-radius:10px;background:#09132b;color:#b9c5df}.hack-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.target{border:1px solid #30436e;border-radius:13px;padding:14px;background:#0a132b}.target.selected{border-color:var(--pink);box-shadow:0 0 20px #ff5ccf20}.shield{height:8px;background:#1d2947;border-radius:99px;overflow:hidden;margin:8px 0}.shield i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--pink))}.packet{border:1px dashed #79568d;padding:15px;border-radius:12px;background:#170f29;margin-top:12px}.terminal{background:#03060e;border:1px solid #203251;border-radius:12px;padding:14px;color:#7df7bd;font:12px ui-monospace,monospace;min-height:145px;white-space:pre-wrap}.shop{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:12px;border-bottom:1px solid #203050}.table th{color:var(--muted);font-size:12px;text-transform:uppercase}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#172648;color:var(--cyan);font-size:11px}.toast{position:fixed;right:22px;bottom:22px;background:#101d3c;border:1px solid #3b5a8e;padding:13px 16px;border-radius:11px;display:none;box-shadow:0 15px 40px #0008}input{background:#071127;color:var(--text);border:1px solid #2b416e;border-radius:9px;padding:10px;width:100%}@media(max-width:900px){.grid,.hack-grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.shop{grid-template-columns:1fr 1fr}}@media(max-width:650px){.app{grid-template-columns:1fr}.sidebar{position:sticky;top:0;z-index:10;flex-direction:row;overflow:auto;border-right:0;border-bottom:1px solid #182447}.logo{margin:0}.nav{min-width:68px}.main{padding:16px}.answers{grid-template-columns:1fr}.market{grid-template-columns:1fr}}
 
@@ -71,8 +127,17 @@
 .qha-learning{margin-top:14px;padding:16px;border:1px solid #47649a;border-radius:13px;background:linear-gradient(135deg,#101d3c,#171631)}
 .qha-learning h3{margin:0 0 10px;color:#ffd76a}.qha-learning p{margin:8px 0;line-height:1.55}.qha-learning .qha-good{color:#65f0a7;font-weight:800}.qha-learning .qha-bad{color:#ff9bb0;font-weight:800}
 .qha-learning code{white-space:pre-wrap;overflow-wrap:anywhere}.qha-learning small{color:#a9b8da}.qha-learning .btn{margin-top:10px}
+
+/* v18.7 — permanent achievement showcase */
+.qha-ach-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin:15px 0}
+.qha-ach{padding:16px 10px;text-align:center;border:1px solid #33466f;border-radius:16px;background:linear-gradient(150deg,#132047,#17132e);opacity:.48}
+.qha-ach.unlocked{opacity:1;border-color:#ffdc73;box-shadow:0 0 22px #ffd76a22}
+.qha-ach-icon{font-size:38px;display:block;margin-bottom:9px}.qha-ach strong{display:block;color:#ffe6a1}.qha-ach small{color:#a9b8da}
+.qha-ach-toast{position:fixed;z-index:10045;left:50%;top:12%;transform:translateX(-50%);background:linear-gradient(135deg,#32215c,#152e51);border:2px solid #ffd76a;border-radius:20px;padding:20px 28px;text-align:center;box-shadow:0 0 55px #ffda7a66;animation:qhaBadgeIn 3.8s ease forwards;pointer-events:none}
+@keyframes qhaBadgeIn{0%{opacity:0;transform:translate(-50%,-20px) scale(.8)}12%,80%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-35px)}}
+@media(prefers-reduced-motion:reduce){.qha-ach-toast{animation:none}}
 </style></head>
-<body><div class="app"><aside class="sidebar"><div class="logo">QH</div><button class="nav active" data-page="multiplayer"><span>⚔</span>Play</button><button class="nav" data-page="home"><span>⌂</span>Home</button><button class="nav" data-page="quiz"><span>🧠</span>Quiz</button><button class="nav" data-page="hack"><span>⚡</span>Hack</button><button class="nav" data-page="portfolio"><span>◈</span>Wallet</button><button class="nav" data-page="shop"><span>🛒</span>Shop</button><button class="nav" data-page="leaderboard"><span>🏆</span>Ranks</button><button class="nav" data-page="how"><span>?</span>How</button></aside><main class="main">
+<body><div class="app"><aside class="sidebar"><div class="logo">QH</div><button class="nav active" data-page="multiplayer"><span>⚔</span>Play</button><button class="nav" data-page="home"><span>⌂</span>Home</button><button class="nav" data-page="quiz"><span>🧠</span>Quiz</button><button class="nav" data-page="hack"><span>⚡</span>Hack</button><button class="nav" data-page="portfolio"><span>◈</span>Wallet</button><button class="nav" data-page="shop"><span>🛒</span>Shop</button><button class="nav" data-page="leaderboard"><span>🏆</span>Ranks</button><button class="nav" data-page="achievements"><span>🏅</span>Badges</button><button class="nav" data-page="how"><span>?</span>How</button></aside><main class="main">
 <header class="top"><div class="brand"><h1>QuizHack Arena</h1><small>Learn • Challenge • Defend • Compete</small></div><div class="profile"><div class="avatar">🧑‍💻</div><div><strong id="playerName">Blaze</strong><small>Level <span id="levelTop">4</span> • <span id="xpTop">640</span> XP</small></div></div></header>
 
 <section id="multiplayer" class="page active"><div class="grid"><div class="card hero"><div class="eyebrow">REAL-TIME MULTIPLAYER</div><h2>Enter the Cyber Quiz Arena.</h2><p>Create or join a room for 2–7 students. A match can start with only 2 players; Supabase synchronizes questions, XP, firewall, attacks, defenses, and match results.</p><div class="actions"><button class="btn primary" onclick="createRoom()">Create Room</button><button class="btn" onclick="joinRoom()">Join Room</button><button class="btn pink" onclick="quickMatch()">Quick Match</button></div><div class="section-title"><h3>Player</h3></div><input id="nameInput" maxlength="18" placeholder="Enter your player name"><div class="section-title"><h3>Room Code</h3><span id="connectionBadge" class="badge">CONNECTING</span></div><input id="roomInput" maxlength="8" placeholder="e.g. ABC123"></div><div class="card"><div class="section-title"><h3>Matchmaking</h3><span id="roomBadge" class="badge">NO ROOM</span></div><div id="lobbyStatus" class="feedback">Connecting to Supabase…</div><div class="list" id="lobbyPlayers"></div><div class="actions" style="margin-top:14px"><button class="btn primary" id="readyBtn" onclick="toggleReady()" disabled>I'm Ready</button><button class="btn" onclick="leaveRoom()">Leave Room</button></div><p class="muted">Rooms support up to 7 players and can start with 2. The game-only “hacking” mechanic changes firewall stats; it does not attack real computers.</p></div></div></section>
@@ -121,7 +186,7 @@
 <p class="muted">Educational simulation only. XEO, BYTE and GLCH are fictional game assets, prices are randomly simulated, and nothing here represents real cryptocurrency or real money.</p>
 </div></section>
 <section id="shop" class="page"><div class="card"><div class="section-title"><h2>Upgrade Shop</h2><span id="shopCoins" class="badge">1250 XEO</span></div><div class="shop"><div class="card"><h3>🛡️ Firewall Patch</h3><p class="muted">+15 firewall</p><b style="color:var(--yellow)">100 XEO</b><br><button class="btn primary" onclick="buy(100)">Buy</button></div><div class="card"><h3>⚡ Turbo Packet</h3><p class="muted">+10 hack power</p><b style="color:var(--yellow)">180 XEO</b><br><button class="btn primary" onclick="buy(180)">Buy</button></div><div class="card"><h3>🔥 Streak Shield</h3><p class="muted">Protects one streak miss</p><b style="color:var(--yellow)">250 XEO</b><br><button class="btn primary" onclick="buy(250)">Buy</button></div></div></div></section>
-<section id="leaderboard" class="page"><div class="card"><div class="section-title"><h2>Leaderboard</h2></div><table class="table"><thead><tr><th>Place</th><th>Player</th><th>Level</th><th>XP</th><th>Firewall</th></tr></thead><tbody id="leaderRows"></tbody></table></div></section>
+<section id="achievements" class="page"><div class="card"><div class="section-title"><h2>🏅 Achievement Badges</h2><span class="badge">SUPABASE SAVED</span></div><p class="muted">Earn badges through multiplayer matches. Locked badges unlock as you progress.</p><div id="qhaMyAchievements" class="qha-ach-grid"></div><h3>Classmate Showcase</h3><p class="muted">Select a player to view their public achievements.</p><select id="qhaBadgePlayerSelect" style="width:100%;padding:12px;background:#09132b;color:#eef4ff;border:1px solid #33466f;border-radius:10px"></select><div id="qhaOtherAchievements" class="qha-ach-grid"></div></div></section><section id="leaderboard" class="page"><div class="card"><div class="section-title"><h2>Leaderboard</h2></div><table class="table"><thead><tr><th>Place</th><th>Player</th><th>Level</th><th>XP</th><th>Firewall</th></tr></thead><tbody id="leaderRows"></tbody></table></div></section>
 <section id="how" class="page">
 <div class="card">
   <h2>How to Play</h2>
@@ -266,6 +331,7 @@ function showPage(id){
   document.querySelectorAll(".nav").forEach(x=>x.classList.toggle("active",x.dataset.page===(id==="match"?"multiplayer":id)));
   if(id==="quiz")loadQuestion();
   if(id==="leaderboard")loadLeaderboard();
+  if(id==="achievements")qhaLoadAchievements();
   if(id==="match"){renderMatch();refreshPackets()}
 }
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>showPage(b.dataset.page));
@@ -282,7 +348,7 @@ function renderLeaderboard(){
     const medal=medalFor(place);
     const medalName=place===1?"Gold":place===2?"Silver":"Bronze";
     const placeHtml=medal?`<span class="medal-place"><span class="medal-icon" role="img" aria-label="${medalName} medal">${medal}</span><span class="medal-rank">#${place}</span></span>`:`<b>#${place}</b>`;
-    return `<tr class="${place<=3?`leader-top${place}`:""}"><td>${placeHtml}</td><td><b>${esc(p.name)}</b></td><td>${p.level||1}</td><td>${p.xp||0}</td><td>${p.shield??100}%</td></tr>`;
+    return `<tr class="${place<=3?`leader-top${place}`:""}"><td>${placeHtml}</td><td><b>${esc(p.name)}</b> <span class="qha-leader-badges" data-badge-player="${esc(p.id||'')}">${qhaBadgeSummary(p.id)}</span></td><td>${p.level||1}</td><td>${p.xp||0}</td><td>${p.shield??100}%</td></tr>`;
   }).join(""):`<tr><td colspan="5" class="muted">Loading shared leaderboard…</td></tr>`;
 }
 let qhaLeaderboardBusy=false;
@@ -292,7 +358,7 @@ async function loadLeaderboard(){
   try{
     const r=await sb.rpc("get_leaderboard",{p_limit:100});
     if(r.error){log("[leaderboard] "+r.error.message);$("leaderRows").innerHTML=`<tr><td colspan="5" class="muted">Could not load leaderboard: ${esc(r.error.message)}</td></tr>`;return}
-    leaderboardRows=r.data||[];renderLeaderboard();
+    leaderboardRows=r.data||[];renderLeaderboard();qhaLoadBadgeSummaries();
   }finally{qhaLeaderboardBusy=false}
 }
 // Refresh rankings when the Ranks page is visible, not only on first navigation.
@@ -773,7 +839,7 @@ async function submitAnswer(i){
     $("mFeedback").textContent="✕ Wrong answer. Glitch Token earned. "+(q.e||"");
     showInlineTokenWarning();
   }
-  await refreshRoom();await loadRoom();await syncProfile();await loadLeaderboard();
+  await refreshRoom();await loadRoom();await syncProfile();await loadLeaderboard();qhaCheckNewBadges();
   const me=roomPlayers.find(p=>p.id===meId);
   window.matchQuestionIndex=Math.min(10,me?.match_questions_answered||0);
   if(window.matchQuestionIndex>=10&&room?.status!=="finished")toast("10 questions complete — waiting for the other players.");
