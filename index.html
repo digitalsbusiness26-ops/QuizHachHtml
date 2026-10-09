@@ -182,7 +182,7 @@
 <div class="eyebrow">LEVEL 1 • CYBER TITAN</div><h2 style="font-size:31px;margin:8px 0">Outsmart the Cyber Titan</h2><div class="section-title"><strong id="qhaBossHp">1,000 / 1,000 HP</strong><span id="qhaBossClock" class="badge">10:00</span></div>
 <div class="qha-boss-health"><div id="qhaBossHpFill" style="width:100%"></div></div><div class="qha-duel-team"><strong>🛡️ Team Firewall: <span id="qhaTeamShield">100 / 100</span></strong><div class="qha-team-health"><div id="qhaTeamFill" style="width:100%"></div></div></div><div class="qha-boss-pills"><span id="qhaBossAi">Cyber Titan · Elite · 70% target accuracy</span><span id="qhaBossThink">⚔️ Boss answers your questions too</span></div>
 <div class="qha-boss-pills"><span id="qhaBossPlayers">0 / 7 students</span><span id="qhaBossStatus">Not joined</span><span id="qhaBossDamage">0 damage</span></div>
-<div class="actions"><button class="btn primary" id="qhaBossJoinBtn" onclick="qhaBossJoin()">Join Weekly Boss</button><button class="btn" onclick="qhaBossRefresh()">↻ Refresh</button></div>
+<div class="actions"><button class="btn primary" id="qhaBossJoinBtn" onclick="qhaBossJoin()">Join Weekly Boss</button><button class="btn" onclick="qhaBossRefresh()">↻ Refresh</button><button class="btn" id="qhaBossLeaveBtn" onclick="qhaBossLeave()" style="display:none">🚪 Leave Boss Arena</button><button class="btn primary" id="qhaBossReplayBtn" onclick="qhaBossReplay()" style="display:none">↻ Play Again</button></div>
 </div></div>
 <div class="grid" style="margin-top:18px"><div class="card"><h3>⚡ Your Next Challenge</h3><div id="qhaBossQuestion" class="question" style="font-size:21px">Join the weekly challenge to receive your first question.</div><div id="qhaBossAnswers" class="qha-boss-answers"></div><div id="qhaBossFeedback" class="feedback" role="status" aria-live="polite">Both sides answer the same question. Correct and faster wins the exchange; the boss can damage your team firewall.</div></div>
 <div class="card"><h3>🤝 Team Contributions</h3><div id="qhaBossRoster" class="qha-boss-roster"><span class="muted">No teammates loaded yet.</span></div><div class="packet"><b>Weekly XEO rewards</b><p>Answer 5 questions: +100 XEO. Defeat the boss: +250 XEO for each eligible teammate. Top contributor: +100 XEO. Each bonus is granted once per boss attempt by Supabase.</p><small class="muted">No paid avatar or vehicle changes boss damage.</small></div></div></div>
@@ -1407,11 +1407,13 @@ function qhaBossRender(data){
  $('qhaBossDamage').textContent=`${me?.damage||0} your damage`;
  $('qhaBossJoinBtn').disabled=!!me||!!(room&&room.status!=='waiting'&&room.status!=='playing');
  $('qhaBossJoinBtn').textContent=me?'✓ Joined':'Join Weekly Boss';
+ $('qhaBossLeaveBtn').style.display=me?'inline-block':'none';
+ $('qhaBossReplayBtn').style.display=me&&['won','lost'].includes(room?.status)?'inline-block':'none';
  $('qhaBossRoster').innerHTML=players.length?players.map(p=>`<div class="qha-boss-player"><strong>${esc(p.name)}</strong><span>${Number(p.damage)||0} damage · ${Number(p.correct_count)||0} correct</span></div>`).join(''):'<span class="muted">Waiting for teammates.</span>';
  const questionKey=q?`${q.id}:${me?.answers_count||0}`:'';
  if(questionKey!==qhaBossLastQuestionKey){qhaBossLastQuestionKey=questionKey;$('qhaBossFeedback').textContent='Answer accurately and quickly: Cyber Titan is competing on this question too.';}
  const canAnswer=room?.status==='playing'&&!!q&&!qhaBossBusy;
- $('qhaBossQuestion').textContent=!me?'Join the weekly challenge to begin.':room?.status==='waiting'?'Waiting for another student to join…':room?.status==='won'?'🏆 Victory! The team defeated Cyber Titan.':room?.status==='lost'?'💥 The boss won this battle. Review your answers and try again next week.':me?.answers_count>=10?'You completed your 10 boss questions. Great teamwork!':q?.prompt||'Loading your challenge…';
+ $('qhaBossQuestion').textContent=!me?'Join the weekly challenge to begin.':room?.status==='waiting'?'Waiting for another student to join…':room?.status==='won'?'🏆 Victory! The team defeated Cyber Titan.':room?.status==='lost'?'💥 The boss won this battle. Select Play Again for a fresh attempt.':me?.answers_count>=10?'You completed your 10 boss questions. Great teamwork!':q?.prompt||'Loading your challenge…';
  $('qhaBossAnswers').innerHTML=canAnswer?q.options.map((a,i)=>`<button class="btn" onclick="qhaBossAnswer(${i})">${esc(a)}</button>`).join(''):'';
 }
 async function qhaBossRefresh(){
@@ -1421,6 +1423,19 @@ async function qhaBossJoin(){
  if(qhaBossBusy)return;qhaBossBusy=true;
  try{await connect();const n=await name();const r=await sb.rpc('qha_boss_join',{p_name:n});if(r.error)throw r.error;qhaBossRender(r.data);toast('Joined the weekly Cyber Boss team!')}
  catch(e){toast('Boss join failed: '+e.message)}finally{qhaBossBusy=false;}
+}
+async function qhaBossLeave(){
+ if(qhaBossBusy)return;
+ qhaBossBusy=true;
+ try{await connect();const r=await sb.rpc('qha_boss_leave');if(r.error)throw r.error;qhaBossRender(r.data);qhaBossLastQuestionKey='';toast('You left the Boss Arena. Your teammates can continue.');showPage('multiplayer');}
+ catch(e){toast('Could not leave Boss Arena: '+e.message)}finally{qhaBossBusy=false;}
+}
+async function qhaBossReplay(){
+ if(qhaBossBusy)return;
+ if(!['won','lost'].includes(qhaBossData?.room?.status))return toast('Finish the current battle first.');
+ qhaBossBusy=true;
+ try{await connect();const n=await name();const r=await sb.rpc('qha_boss_rematch',{p_name:n});if(r.error)throw r.error;qhaBossLastQuestionKey='';qhaBossRender(r.data);toast('New boss battle created. Waiting for another student to join!');}
+ catch(e){toast('Could not start another battle: '+e.message)}finally{qhaBossBusy=false;}
 }
 async function qhaBossAnswer(index){
  if(qhaBossBusy||!qhaBossData?.question)return;
