@@ -44,6 +44,15 @@
 @keyframes qhaVictoryAppear{0%{opacity:0;transform:scale(.4)}12%{opacity:1;transform:scale(1.13)}20%{transform:scale(1)}82%{opacity:1}100%{opacity:0;transform:scale(.95)}}
 @keyframes qhaVictoryFall{0%{opacity:0;transform:translate3d(0,-30px,0) rotate(0deg) rotateY(0deg)}8%{opacity:1}88%{opacity:1}100%{opacity:0;transform:translate3d(var(--drift),110vh,0) rotate(var(--spin)) rotateY(900deg)}}
 @media(prefers-reduced-motion:reduce){.qha-victory-panel,.qha-victory-confetti{animation:none}.qha-victory-confetti{display:none}}
+
+/* v18.4.4: keep the champion panel visible until Leave Game succeeds. */
+.qha-victory-layer{pointer-events:auto;background:#05091acc}
+.qha-victory-panel{z-index:2;animation:qhaChampionStay .5s ease-out both;max-width:calc(100vw - 30px)}
+@keyframes qhaChampionStay{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+.qha-victory-confetti{animation:qhaVictoryFall var(--dur) var(--delay) linear infinite}
+.qha-victory-leave{margin-top:22px;padding:13px 26px;font-size:17px;font-weight:800;pointer-events:auto;position:relative;z-index:3}
+.qha-victory-leave:disabled{opacity:.6;cursor:wait}
+@media(prefers-reduced-motion:reduce){.qha-victory-panel{animation:none;opacity:1;transform:none}}
 </style></head>
 <body><div class="app"><aside class="sidebar"><div class="logo">QH</div><button class="nav active" data-page="multiplayer"><span>⚔</span>Play</button><button class="nav" data-page="home"><span>⌂</span>Home</button><button class="nav" data-page="quiz"><span>🧠</span>Quiz</button><button class="nav" data-page="hack"><span>⚡</span>Hack</button><button class="nav" data-page="portfolio"><span>◈</span>Wallet</button><button class="nav" data-page="shop"><span>🛒</span>Shop</button><button class="nav" data-page="leaderboard"><span>🏆</span>Ranks</button><button class="nav" data-page="how"><span>?</span>How</button></aside><main class="main">
 <header class="top"><div class="brand"><h1>QuizHack Arena</h1><small>Learn • Challenge • Defend • Compete</small></div><div class="profile"><div class="avatar">🧑‍💻</div><div><strong id="playerName">Blaze</strong><small>Level <span id="levelTop">4</span> • <span id="xpTop">640</span> XP</small></div></div></header>
@@ -435,6 +444,7 @@ async function leaveRoom(){
   window.qhaFirewallObservation=null;
   window.qhaObservedHits=[];
   clearActiveMatch();
+  document.querySelectorAll(".qha-victory-layer").forEach(e=>e.remove());
   roomCode=null;roomId=null;roomPlayers=[];room=null;currentPacket=null;selectedTargetId=null;ready=false;
   window.matchQuestionSet=[];window.matchQuestionIndex=0;window.qhaLoadedRound=null;
   $("roomBadge").textContent="NO ROOM";
@@ -491,10 +501,10 @@ function renderMatch(){
   renderAttackChoice();
   updateAttackButton();
 }
-// Show the celebration only to the player ranked first, once per completed round.
+// Celebrate every player sharing the highest score, once per completed round.
 const qhaCelebratedRounds = new Set();
-function qhaCelebrateFirstPlace(winner){
-  if(!winner || winner.id!==meId || room?.status!=="finished")return;
+function qhaCelebrateFirstPlace(winners){
+  if(!Array.isArray(winners) || !winners.some(p=>p.id===meId) || room?.status!=="finished")return;
   const key=String(roomId)+":"+String(room?.round_number??0);
   if(qhaCelebratedRounds.has(key))return;
   qhaCelebratedRounds.add(key);
@@ -506,7 +516,22 @@ function qhaCelebrateFirstPlace(winner){
   const trophy=document.createElement("div");trophy.className="qha-victory-trophy";trophy.textContent="🏆";
   const title=document.createElement("div");title.className="qha-victory-title";title.textContent="CHAMPION!";
   const sub=document.createElement("div");sub.className="qha-victory-sub";sub.textContent="🥇 1ST PLACE — YOU WON!";
-  panel.append(trophy,title,sub);layer.append(panel);
+  const leaveButton=document.createElement("button");
+  leaveButton.type="button";
+  leaveButton.className="btn primary qha-victory-leave";
+  leaveButton.textContent="Leave Game";
+  leaveButton.addEventListener("click",async()=>{
+    leaveButton.disabled=true;
+    leaveButton.textContent="Leaving Game…";
+    try{await leaveRoom();}
+    finally{
+      if(document.body.contains(leaveButton)){
+        leaveButton.disabled=false;
+        leaveButton.textContent="Leave Game";
+      }
+    }
+  });
+  panel.append(trophy,title,sub,leaveButton);layer.append(panel);
   if(!window.matchMedia("(prefers-reduced-motion: reduce)").matches){
     // Dense, staggered confetti shower: small paper ribbons, like the supplied reference.
     const colors=["#ffcf27","#ff6a24","#f83b82","#874cff","#24bdf0","#12c9a4","#60d952","#ffffff"];
@@ -526,7 +551,7 @@ function qhaCelebrateFirstPlace(winner){
     }
   }
   document.body.append(layer);
-  setTimeout(()=>layer.remove(),6200);
+  // No timeout: the winner chooses when to leave the game.
 }
 const qhaFinalSnapshots=new Map();
 function renderPodium(){
@@ -537,14 +562,19 @@ function renderPodium(){
   const current=[...merged.values()];
   if(room?.status==="finished")qhaFinalSnapshots.set(snapshotKey,current);
   const ranked=[...current].sort((a,b)=>(b.score||0)-(a.score||0)||(b.shield||0)-(a.shield||0)||(a.name||"").localeCompare(b.name||""));
-  qhaCelebrateFirstPlace(ranked[0]);
+  // Competition ranking: 10/10, 10/10, 8/10 -> 1st, 1st, 3rd.
+  // Shield/name sort only determine display order, never break score ties.
+  const rankOf=ranked.map((p,i)=>i===0?1:1+ranked.filter(x=>(x.score||0)>(p.score||0)).length);
+  const bestScore=ranked.length?(ranked[0].score||0):null;
+  qhaCelebrateFirstPlace(ranked.filter(p=>(p.score||0)===bestScore));
   const medals=["🥇","🥈","🥉"],labels=["1st Place","2nd Place","3rd Place"];
   $("podium").innerHTML=[0,1,2].map(i=>{
     const p=ranked[i];
     if(!p)return `<div class="stat" style="min-height:${110-i*15}px"><b>${medals[i]} ${labels[i]}</b><small>—</small></div>`;
-    return `<div class="stat" style="min-height:${150-i*20}px;display:flex;flex-direction:column;justify-content:center;text-align:center"><b style="font-size:1.5rem">${medals[i]}</b><b>${esc(p.name)}</b><small>${labels[i]} • ${p.score||0}/10 correct</small></div>`;
+    const rank=rankOf[i],medal=medals[rank-1]||"🏅",label=labels[rank-1]||`${rank}th Place`;
+    return `<div class="stat" style="min-height:${150-i*20}px;display:flex;flex-direction:column;justify-content:center;text-align:center"><b style="font-size:1.5rem">${medal}</b><b>${esc(p.name)}</b><small>${label} • ${p.score||0}/10 correct</small></div>`;
   }).join("");
-  $("finalStandings").innerHTML=ranked.map((p,i)=>`<div class="row"><span><b>#${i+1} ${esc(p.name)}</b>${p.id===meId?' <span class="muted">(You)</span>':''}</span><span><span class="badge">${p.score||0}/10</span> <span class="badge">⚡ ${p.tokens||0} Tokens</span></span></div>`).join("");
+  $("finalStandings").innerHTML=ranked.map((p,i)=>`<div class="row"><span><b>#${rankOf[i]} ${esc(p.name)}</b>${p.id===meId?' <span class="muted">(You)</span>':''}</span><span><span class="badge">${p.score||0}/10</span> <span class="badge">⚡ ${p.tokens||0} Tokens</span></span></div>`).join("");
   const me=ranked.find(p=>p.id===meId);
   const waiting=roomPlayers.filter(p=>p.rematch_ready).length;
   $("rematchStatus").textContent=me?.rematch_ready?`Ready for another match — waiting for the other players (${waiting}/${roomPlayers.length}).`:"Choose Continue Playing to stay with these opponents for another 10-question match.";
