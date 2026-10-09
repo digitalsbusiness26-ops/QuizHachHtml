@@ -416,7 +416,7 @@ async function refreshRoom(){if(!roomId)return;const r=await sb.from("game_playe
     window.qhaFirewallObservation={roomId,playerId:meId,shield:currentShield};
     state.shield=currentShield;
   }
-  localStorage.setItem(KEY,JSON.stringify(state));render()}ready=!!me?.ready;$("readyBtn").textContent=ready?"Ready ✓":"I'm Ready";renderLobby();renderLeaderboard();renderTargets();$("lobbyStatus").textContent=roomPlayers.length>=2?`${roomPlayers.length}/7 players connected. The match can start now when all current players are ready.`:`${roomPlayers.length}/7 players connected. Waiting for at least one more student…`;if(roomPlayers.length>=2&&roomPlayers.every(p=>p.ready))await loadRoom();
+  localStorage.setItem(KEY,JSON.stringify(state));render()}ready=!!me?.ready;$("readyBtn").textContent=ready?"Ready ✓":"I'm Ready";renderLobby();renderLeaderboard();renderTargets();$("lobbyStatus").textContent=roomPlayers.length>=2?`${roomPlayers.length}/7 players connected. The match can start now when all current players are ready.`:`${roomPlayers.length}/7 players connected. Waiting for at least one more student…`;if(roomPlayers.length>=2&&roomPlayers.every(p=>p.ready))await loadRoom();qhaUpdateLobbyCountdown();
 if(room&&room.status==="playing"&&roomPlayers.length>=2&&roomPlayers.every(p=>(p.match_questions_answered||0)>=10)){
   const fin=await sb.rpc("finish_curriculum_match",{p_room_id:roomId});
   if(fin.error)log("[finish] "+fin.error.message);
@@ -425,6 +425,29 @@ if(room&&room.status==="playing"&&roomPlayers.length>=2&&roomPlayers.every(p=>(p
 if(room&&["playing","finished"].includes(room.status)){renderMatch();if(currentPage==="multiplayer")showPage("match")}}
 function renderLobby(){$("lobbyPlayers").innerHTML=roomPlayers.map((p,i)=>`<div class="row"><span>🧑‍💻 <b>${esc(p.name)}</b> <small class="muted">Player ${i+1}/7</small></span><span class="badge">${p.ready?"READY":"WAITING"}</span></div>`).join("")}
 function subscribe(){if(channel)sb.removeChannel(channel);channel=sb.channel("qha-"+roomId).on("postgres_changes",{event:"*",schema:"public",table:"game_players",filter:"room_id=eq."+roomId},refreshRoom).on("postgres_changes",{event:"*",schema:"public",table:"game_rooms",filter:"id=eq."+roomId},loadRoom).on("postgres_changes",{event:"*",schema:"public",table:"game_packets",filter:"room_id=eq."+roomId},refreshPackets).subscribe(status=>log("[realtime] "+status))}
+// Supabase stores the shared deadline; any connected member may ask the server to finalize.
+let qhaCountdownTick=null, qhaCountdownBusy=false;
+function qhaUpdateLobbyCountdown(){
+  const el=document.getElementById('lobbyStatus');
+  if(!el||!roomId||room?.status!=='waiting')return;
+  const players=roomPlayers.length, allReady=players>=2&&roomPlayers.every(p=>p.ready);
+  if(allReady&&room.countdown_ends_at){
+    const seconds=Math.max(0,Math.ceil((Date.parse(room.countdown_ends_at)-Date.now())/1000));
+    el.textContent=`${players}/7 players ready — Match starting in ${seconds} seconds…`;
+    if(seconds===0&&!qhaCountdownBusy){
+      qhaCountdownBusy=true;
+      sb.rpc('qha_finalize_lobby_countdown',{p_room_id:roomId}).then(async result=>{
+        if(result.error)log('[countdown] '+result.error.message);
+        await loadRoom();
+      }).finally(()=>{qhaCountdownBusy=false});
+    }
+  }else if(players<2){
+    el.textContent=`${players}/7 players connected. Waiting for another student…`;
+  }else{
+    el.textContent=`${roomPlayers.filter(p=>p.ready).length}/${players} players ready. Waiting for everyone…`;
+  }
+}
+if(!qhaCountdownTick)qhaCountdownTick=setInterval(qhaUpdateLobbyCountdown,300);
 async function toggleReady(){if(!roomId)return;try{ready=!ready;const r=await sb.rpc("set_ready",{p_room_id:roomId,p_ready:ready});if(r.error){ready=!ready;throw r.error}$("readyBtn").textContent=ready?"Ready ✓":"I'm Ready";await refreshRoom();await loadRoom()}catch(e){toast(e.message);log("[error] "+e.message)}}
 async function leaveRoom(){
   qhaClearVsIntro();
@@ -467,7 +490,7 @@ async function leaveRoom(){
   showPage("multiplayer");
   toast("You left the room.");
 }
-async function loadRoom(){if(!roomId)return;const r=await sb.from("game_rooms").select("*").eq("id",roomId).maybeSingle();if(r.error){log("[error] "+r.error.message);return}if(!r.data)return;room=r.data;
+async function loadRoom(){if(!roomId)return;const r=await sb.from("game_rooms").select("*").eq("id",roomId).maybeSingle();if(r.error){log("[error] "+r.error.message);return}if(!r.data)return;room=r.data;qhaUpdateLobbyCountdown();
 if(room.status==="finished"&&roomId){
   const saved=await sb.rpc("qha_save_my_tokens",{p_room_id:roomId});
   if(saved.error)log("[tokens] finish save failed: "+saved.error.message);
