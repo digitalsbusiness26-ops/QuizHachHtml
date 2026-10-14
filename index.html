@@ -652,13 +652,28 @@ function qhaRng(seed){
 function qhaShuffle(arr,rng){
   const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a;
 }
+// Per-player shuffled curriculum cycles. Stored locally so rematches do not repeat
+// previously seen questions until all questions in the bank have been used.
+function qhaCurriculumHistoryKey(){return 'qha_curriculum_cycle_v2_'+(meId||'guest')}
 function buildMatchQuestionSet(){
-  const seed=qhaHash(`${roomId||"room"}:${room?.round_number||1}:${meId||"player"}`);
-  const rng=qhaRng(seed),shuffled=qhaShuffle(Q,rng);
-  const easy=shuffled.filter(q=>q.difficulty==="easy").slice(0,4);
-  const medium=shuffled.filter(q=>q.difficulty==="medium").slice(0,4);
-  const hard=shuffled.filter(q=>q.difficulty==="hard").slice(0,2);
-  window.matchQuestionSet=qhaShuffle([...easy,...medium,...hard],rng);
+  const key=qhaCurriculumHistoryKey();
+  let history=[];try{history=JSON.parse(localStorage.getItem(key)||'[]')}catch(e){}
+  history=Array.isArray(history)?history.filter(i=>Number.isInteger(i)&&i>=0&&i<Q.length):[];
+  let available=Q.map((q,i)=>i).filter(i=>!history.includes(i));
+  if(available.length<10){history=[];available=Q.map((q,i)=>i)}
+  const rng=qhaRng(qhaHash(`${roomId||'room'}:${room?.round_number||1}:${meId||'player'}`));
+  const pool=qhaShuffle(available,rng);
+  const picked=[];
+  for(const [difficulty,count] of [['easy',4],['medium',4],['hard',2]]){
+    picked.push(...pool.filter(i=>Q[i].difficulty===difficulty).slice(0,count));
+  }
+  for(const i of pool){if(picked.length>=10)break;if(!picked.includes(i))picked.push(i)}
+  const order=qhaShuffle(picked.slice(0,10),rng);
+  window.matchQuestionSet=order.map(i=>{
+    const q=Q[i];const permutation=qhaShuffle([0,1,2,3],rng);
+    return {...q,a:permutation.map(j=>q.a[j]),c:permutation.indexOf(q.c),_originalIndex:i};
+  });
+  try{localStorage.setItem(key,JSON.stringify([...history,...order]))}catch(e){}
 }
 function currentMatchQuestion(){
   if(!window.matchQuestionSet.length)buildMatchQuestionSet();
@@ -793,7 +808,7 @@ async function refreshRoom(){if(!roomId)return;const r=await sb.from("game_playe
     state.shield=currentShield;
   }
   localStorage.setItem(KEY,JSON.stringify(state));render()}ready=!!me?.ready;$("readyBtn").textContent=ready?"Ready ✓":"I'm Ready";renderLobby();renderLeaderboard();renderTargets();$("lobbyStatus").textContent=roomPlayers.length>=2?`${roomPlayers.length}/7 players connected. The match can start now when all current players are ready.`:`${roomPlayers.length}/7 players connected. Waiting for at least one more student…`;if(roomPlayers.length>=2&&roomPlayers.every(p=>p.ready))await loadRoom();qhaUpdateLobbyCountdown();
-if(room&&room.status==="playing"&&roomPlayers.length>=2&&roomPlayers.every(p=>(p.match_questions_answered||0)>=10)){
+if(room&&room.status==="playing"&&(qhaMatchSecondsLeft()<=0||(roomPlayers.length>=2&&roomPlayers.every(p=>(p.match_questions_answered||0)>=10)))){
   const fin=await sb.rpc("finish_curriculum_match",{p_room_id:roomId});
   if(fin.error)log("[finish] "+fin.error.message);
   await loadRoom();
@@ -923,10 +938,17 @@ function renderMatch(){
   const finished=room?.status==="finished";
   if(!finished)qhaMaybeShowVsIntro();
   $("matchTitle").textContent=finished?"Match Complete":(roomPlayers.length>=2?`${roomPlayers.length}-Player Cyber Battle`:"Live Match");
+  qhaRenderMatchClock();
+  if(!document.getElementById('qhaFiveMinuteClock')){
+    const timer=document.createElement('div');timer.id='qhaFiveMinuteClock';
+    timer.style.cssText='font-weight:900;text-align:center;font-size:1.3rem;letter-spacing:.08em;margin:10px 0;padding:10px;border:1px solid #cfac56;border-radius:12px;color:#f4d17a';
+    document.getElementById('matchStats')?.before(timer);
+  }
+  qhaRenderMatchClock();
   $("matchStats").innerHTML=roomPlayers.map(p=>`<div class="stat"><b>${esc(p.name)}${p.id===meId?' (You)':''}</b><small>Answered ${p.match_questions_answered||0}/10 • Score ${p.score||0}/10 • Lv ${p.level||1} • ${p.xp||0} XP • ${p.coins||0} XEO • ${p.tokens||0} Tokens • Firewall ${p.shield??100}%</small></div>`).join("");
 
   if(finished){
-    $("mQuestion").textContent="All players completed their 10 HTML questions.";
+    $("mQuestion").textContent=roomPlayers.every(p=>(p.match_questions_answered||0)>=10)?"All players completed their 10 HTML questions.":"Five minutes elapsed — match complete.";
     $("mAnswers").innerHTML="";
     $("mFeedback").textContent="Final results are ready below.";
     $("matchResults").style.display="block";
@@ -1058,6 +1080,28 @@ async function returnToQuizArena(){
   showPage("multiplayer");
   toast("Back in Quiz Arena — create, join, or quick-match with different opponents.");
 }
+// Server-started five-minute clock. Clients request finalization when it expires.
+let qhaMatchFinalizeBusy=false;
+function qhaMatchSecondsLeft(){
+  if(!room?.started_at)return 300;
+  return Math.max(0,Math.ceil((Date.parse(room.started_at)+300000-Date.now())/1000));
+}
+function qhaRenderMatchClock(){
+  const el=document.getElementById('qhaFiveMinuteClock');
+  if(!el)return;
+  const n=qhaMatchSecondsLeft();
+  el.textContent=room?.status==='finished'?'MATCH COMPLETE':`TIME LEFT ${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
+}
+setInterval(async()=>{
+  if(!roomId||room?.status!=='playing')return;
+  qhaRenderMatchClock();
+  if(qhaMatchSecondsLeft()>0||qhaMatchFinalizeBusy)return;
+  qhaMatchFinalizeBusy=true;
+  try{const result=await sb.rpc('finish_curriculum_match',{p_room_id:roomId});
+    if(result.error)log('[five-minute] '+result.error.message);
+    else {await loadRoom();await refreshRoom()}
+  }finally{qhaMatchFinalizeBusy=false}
+},1000);
 let qhaLiveAnswerBusy=false;
 function animateLiveXP(xp,streakBonus){
   const burst=document.createElement("div");burst.className="qha-xp-burst";
@@ -1093,6 +1137,7 @@ async function submitAnswer(i){
   try{r=await sb.rpc("submit_curriculum_answer",{p_room_id:roomId,p_correct:correct});}
   catch(e){qhaLiveAnswerBusy=false;renderMatch();return toast("Could not submit answer. Please retry.")}
   if(r.error){qhaLiveAnswerBusy=false;renderMatch();return toast(r.error.message)}
+  if(r.data?.accepted===false){qhaLiveAnswerBusy=false;await loadRoom();await refreshRoom();return toast("Time expired — final results are ready.")}
   if(!correct)qhaRememberMiss(q);
   qhaLatestReview={roomId,round:room?.round_number,answered:(Number(window.matchQuestionIndex)||0)+1,q,chosen:i,correct};
   if(correct){
