@@ -637,7 +637,33 @@ async function qhaOpenQuizArenaAfterBossCheck(id){
     log('[quiz gate] '+e.message);
   }finally{qhaQuizGatePending=false;}
 }
+// Market restriction: verify both the current multiplayer match and server-side Boss membership.
+let qhaMarketGatePending=false;
+function qhaInActiveQuizMatch(){return !!(roomId&&room&&room.status==='playing');}
+async function qhaMarketAllowed(){
+  if(qhaInActiveQuizMatch())return false;
+  try{
+    const result=await sb.rpc('qha_boss_active_for_me');
+    if(result.error)throw result.error;
+    return result.data!==true;
+  }catch(error){
+    console.warn('[market gate] Verification unavailable',error);
+    return false; // Fail closed if active-battle status cannot be verified.
+  }
+}
+async function qhaOpenMarketSafely(){
+  if(qhaMarketGatePending)return;
+  qhaMarketGatePending=true;
+  try{
+    if(!(await qhaMarketAllowed())){
+      toast('🔒 Market Locked — Finish or leave your Quiz Matchup or Cyber Boss fight first.','danger');
+      return;
+    }
+    showPage('portfolio',true);
+  }finally{qhaMarketGatePending=false;}
+}
 function showPage(id,qhaQuizVerified=false){
+  if(id==='portfolio'&&!qhaQuizVerified){void qhaOpenMarketSafely();return;}
   if((id==='multiplayer'||id==='quiz')&&!qhaQuizVerified){
     void qhaOpenQuizArenaAfterBossCheck(id);
     return;
@@ -1469,7 +1495,13 @@ function renderCryptoMarket(){
  drawCryptoChart();
 }
 function selectCrypto(sym){if(!cryptoMarket[sym])return;selectedCrypto=sym;renderCryptoMarket()}
-function tradeCrypto(sym,side){
+async function tradeCrypto(sym,side){
+ if(!(await qhaMarketAllowed())){
+   toast('🔒 Market Locked — Trading is unavailable during a Quiz Matchup or Cyber Boss fight.','danger');
+   if(qhaInActiveQuizMatch())showPage('match');
+   else showPage('boss');
+   return;
+ }
  if(sym==="XEO"||!cryptoMarket[sym])return;
  const price=cryptoMarket[sym].price,key="crypto_"+sym.toLowerCase(),held=cryptoHoldings(sym);
  if(side==="buy"){
