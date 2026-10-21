@@ -1045,13 +1045,20 @@ function renderMatch(){
     $("matchResults").style.display="none";
     const answered=me?.match_questions_answered??window.matchQuestionIndex;
     window.matchQuestionIndex=Math.max(0,Math.min(10,answered||0));
-    const q=currentMatchQuestion();
+    const expectedKey=String(roomId)+":"+String(room?.round_number||1)+":"+window.matchQuestionIndex;
+    const q=qhaSecureQuestionKey===expectedKey?qhaSecureQuestion:null;
+    if(!q&&window.matchQuestionIndex<10&&!qhaSecureQuestionLoading)queueMicrotask(qhaLoadSecureMatchQuestion);
     if(q){
       $("mQNum").textContent=window.matchQuestionIndex+1;
       $("mQuestion").textContent=q.q;
       $("mAnswers").innerHTML=q.a.map((a,i)=>`<button class="answer" onclick="submitAnswer(${i})">${esc(a)}</button>`).join("");
       $("mFeedback").textContent="10-question HTML match drawn from the 100-question curriculum bank — CSS defenses do not count toward the 10 questions.";
       if(qhaLatestReview&&qhaLatestReview.roomId===roomId&&qhaLatestReview.round===room?.round_number&&qhaLatestReview.answered===answered)qhaShowLearning("qhaMatchLearning",qhaLearningHtml(qhaLatestReview.q,qhaLatestReview.chosen,qhaLatestReview.correct?"Correct — here is why":"Learn From Every Wrong Answer"));else qhaShowLearning("qhaMatchLearning","");
+    }else if(window.matchQuestionIndex<10){
+      $("mQNum").textContent=window.matchQuestionIndex+1;
+      $("mQuestion").textContent="Loading your secure question…";
+      $("mAnswers").innerHTML="";
+      $("mFeedback").textContent="Answers are checked by Supabase.";
     }else{
       $("mQNum").textContent="10";
       $("mQuestion").textContent="You completed your 10 HTML questions. Waiting for the other players to finish…";
@@ -1201,6 +1208,26 @@ setInterval(async()=>{
     else {qhaRecordForfeits(result.data);await loadRoom();await refreshRoom()}
   }finally{qhaMatchFinalizeBusy=false}
 },5000);
+let qhaSecureQuestion=null;
+let qhaSecureQuestionKey="";
+let qhaSecureQuestionLoading=false;
+async function qhaLoadSecureMatchQuestion(){
+ if(!roomId||room?.status!=="playing"||qhaSecureQuestionLoading)return;
+ const answered=Number(roomPlayers.find(p=>p.id===meId)?.match_questions_answered||0);
+ const key=String(roomId)+":"+String(room?.round_number||1)+":"+answered;
+ if(answered>=10||qhaSecureQuestionKey===key&&qhaSecureQuestion)return;
+ qhaSecureQuestionLoading=true;
+ try{
+  const r=await sb.rpc("qha_get_multiplayer_question",{p_room_id:roomId});
+  if(r.error)throw r.error;
+  if(r.data?.accepted){
+   qhaSecureQuestion={q:r.data.question,a:r.data.options,category:r.data.category,difficulty:r.data.difficulty};
+   qhaSecureQuestionKey=key;
+   if(room?.status==="playing")renderMatch();
+  }else if(r.data?.time_expired){await loadRoom();}
+ }catch(e){console.error("Secure match question:",e);toast("Question loading failed: "+(e.message||e));}
+ finally{qhaSecureQuestionLoading=false;}
+}
 let qhaLiveAnswerBusy=false;
 function animateLiveXP(xp,streakBonus){
   const burst=document.createElement("div");burst.className="qha-xp-burst";
@@ -1226,33 +1253,36 @@ function hideInlineTokenWarning(){
 }
 async function submitAnswer(i){
   if(!roomId||room?.status!=="playing"||qhaLiveAnswerBusy)return;
-  const q=currentMatchQuestion();
+  const q=qhaSecureQuestion;
   if(!q)return toast("Your 10 HTML match questions are complete.");
   hideInlineTokenWarning();
-  const correct=i===q.c;
+  
   qhaLiveAnswerBusy=true;
   document.querySelectorAll("#mAnswers .answer").forEach(b=>b.disabled=true);
   let r;
-  try{r=await sb.rpc("submit_curriculum_answer",{p_room_id:roomId,p_correct:correct});}
+  try{r=await sb.rpc("qha_submit_verified_answer",{p_room_id:roomId,p_selected_index:i});}
   catch(e){qhaLiveAnswerBusy=false;renderMatch();return toast("Could not submit answer. Please retry.")}
   if(r.error){qhaLiveAnswerBusy=false;renderMatch();return toast(r.error.message)}
   if(r.data?.accepted===false){qhaLiveAnswerBusy=false;await loadRoom();await refreshRoom();return toast("Time expired — final results are ready.")}
-  if(!correct)qhaRememberMiss(q);
-  qhaLatestReview={roomId,round:room?.round_number,answered:(Number(window.matchQuestionIndex)||0)+1,q,chosen:i,correct};
+  const correct=Boolean(r.data?.correct);
+  const reviewed={...q,c:Number(r.data?.correct_index),e:r.data?.explanation||""};
+  if(!correct)qhaRememberMiss(reviewed);
+  qhaLatestReview={roomId,round:room?.round_number,answered:(Number(window.matchQuestionIndex)||0)+1,q:reviewed,chosen:i,correct};
   if(correct){
     qhaShowCombo(Number(r.data?.correct_streak||0),Number(r.data?.questions_answered||0));
     const xpEarned=Number(r.data?.xp_earned??10);
     const streakBonus=Boolean(r.data?.streak_bonus);
     animateLiveXP(xpEarned,streakBonus);
-    $("mFeedback").textContent="✓ Correct! +"+xpEarned+" XP and +15 XEO. "+(q.e||"");
+    $("mFeedback").textContent="✓ Correct! +"+xpEarned+" XP and +15 XEO. "+(reviewed.e||"");
   }else{
-    $("mFeedback").textContent="✕ Wrong answer. Glitch Token earned. "+(q.e||"");
+    $("mFeedback").textContent="✕ Wrong answer. Glitch Token earned. "+(reviewed.e||"");
     showInlineTokenWarning();
   }
   await refreshRoom();await loadRoom();await syncProfile();await loadLeaderboard();qhaCheckNewBadges();
   const me=roomPlayers.find(p=>p.id===meId);
   window.matchQuestionIndex=Math.min(10,me?.match_questions_answered||0);
   if(window.matchQuestionIndex>=10&&room?.status!=="finished")toast("10 questions complete — waiting for the other players.");
+  qhaSecureQuestion=null;qhaSecureQuestionKey="";
   renderMatch();
   qhaLiveAnswerBusy=false;
 }
